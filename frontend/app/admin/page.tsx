@@ -1,33 +1,85 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [newMember, setNewMember] = useState({ name: '', phone: '', role: '' });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [loading, setLoading] = useState(true);
+  
+  const router = useRouter();
 
+  // 1. Session check & safe data fetching on load/refresh
   useEffect(() => {
-    fetch('http://localhost:8000/api/bookings').then(res => res.json()).then(data => setBookings(data));
-    fetch('http://localhost:8000/api/members').then(res => res.json()).then(data => setMembers(data));
-  }, [refreshTrigger]);
+    const initializeAdmin = async () => {
+      try {
+        // Fetch data concurrently using credentials
+        const [bookingsRes, membersRes] = await Promise.all([
+          fetch('http://localhost:8000/api/bookings', { credentials: 'include' }),
+          fetch('http://localhost:8000/api/members', { credentials: 'include' })
+        ]);
 
+        // If either request responds with 401/403, redirect to login
+        if (bookingsRes.status === 401 || membersRes.status === 401) {
+          router.push('/login');
+          return;
+        }
+
+        if (bookingsRes.ok) setBookings(await bookingsRes.json());
+        if (membersRes.ok) setMembers(await membersRes.json());
+
+      } catch (error) {
+        console.error("Failed to connect to backend:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAdmin();
+  }, [refreshTrigger, router]);
+
+  // 2. Handle Status Update
   const handleStatusChange = async (id: number, newStatus: string) => {
-    await fetch(`http://localhost:8000/api/bookings/${id}/status?status=${newStatus}`, { method: 'PATCH' });
-    setRefreshTrigger(prev => prev + 1);
+    try {
+      const res = await fetch(`http://localhost:8000/api/bookings/${id}/status?status=${newStatus}`, { 
+        method: 'PATCH',
+        credentials: 'include'
+      });
+      if (res.ok) setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
   };
 
+  // 3. Handle Adding New Member
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('http://localhost:8000/api/members', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newMember)
-    });
-    setNewMember({ name: '', phone: '', role: '' });
-    setRefreshTrigger(prev => prev + 1);
+    try {
+      const res = await fetch('http://localhost:8000/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newMember)
+      });
+      if (res.ok) {
+        setNewMember({ name: '', phone: '', role: '' });
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("Error adding member:", error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-stone-500 font-semibold animate-pulse">Loading dashboard session...</p>
+      </div>
+    );
+  }
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
@@ -63,11 +115,11 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-3 text-right space-x-1">
                         {b.status === 'Pending' && (
-                          <button onClick={() => handleStatusChange(b.id, 'Approved')} className="bg-emerald-700 text-white text-xs px-2 py-1 rounded font-bold hover:bg-emerald-800">
+                          <button onClick={() => handleStatusChange(b.id, 'Approved')} className="bg-emerald-700 text-white text-xs px-2 py-1 rounded font-bold hover:bg-emerald-800 transition">
                             Approve
                           </button>
                         )}
-                        <button onClick={() => handleStatusChange(b.id, 'Rescheduled')} className="bg-stone-200 text-stone-700 text-xs px-2 py-1 rounded hover:bg-stone-300">
+                        <button onClick={() => handleStatusChange(b.id, 'Rescheduled')} className="bg-stone-200 text-stone-700 text-xs px-2 py-1 rounded hover:bg-stone-300 transition">
                           Reschedule
                         </button>
                       </td>
