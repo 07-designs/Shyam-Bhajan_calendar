@@ -119,16 +119,52 @@ class MemberResponse(MemberCreate):
 class NotificationService:
     @staticmethod
     def send_mandal_alert(booking: BookingModel):
-        # Structured seamlessly for fast Twilio SMS/WhatsApp hook implementation
-        message = (
-            f"Jai Shree Shyam! New Bhajan Sandhya requested by {booking.full_name} "
-            f"for {booking.booking_date}. Address: {booking.address}. "
-            f"Phone: {booking.phone}. Please review the admin panel to approve."
+        """
+        Send WhatsApp notification to admin when a new booking is created.
+        Falls back to console print if Twilio is not configured.
+        """
+        # Load Twilio config from environment
+        twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        twilio_from = os.getenv("TWILIO_WHATSAPP_FROM")  # e.g., "whatsapp:+14155238886"
+        admin_whatsapp = os.getenv("ADMIN_WHATSAPP_NUMBER")  # e.g., "whatsapp:+919876543210"
+        admin_panel_url = os.getenv("ADMIN_PANEL_URL", "http://localhost:3000/admin")
+
+        # Build message
+        message_body = (
+            f"🙏 *Jai Shree Shyam!*\n\n"
+            f"*New Booking Request*\n\n"
+            f"👤 *Name:* {booking.full_name}\n"
+            f"📅 *Date:* {booking.booking_date.strftime('%d %B %Y')}\n"
+            f"📍 *Address:* {booking.address}\n"
+            f"📞 *Phone:* {booking.phone}\n\n"
+            f"Please review and approve/reschedule:\n"
+            f"👉 {admin_panel_url}"
         )
-        print("\n" + "="*50)
-        print("--- OUTBOUND TWILIO/WHATSAPP NOTIFICATION ENGINE ---")
-        print(message)
-        print("="*50 + "\n")
+
+        # Attempt to send via Twilio if configured
+        if all([twilio_account_sid, twilio_auth_token, twilio_from, admin_whatsapp]):
+            try:
+                from twilio.rest import Client
+                client = Client(twilio_account_sid, twilio_auth_token)
+                message = client.messages.create(
+                    body=message_body,
+                    from_=twilio_from,
+                    to=admin_whatsapp
+                )
+                print(f"\n✅ WhatsApp notification sent successfully! SID: {message.sid}\n")
+            except Exception as e:
+                print(f"\n❌ Failed to send WhatsApp: {e}\n")
+                print("Fallback: Logging message to console.")
+                print("\n" + "="*60)
+                print(message_body)
+                print("="*60 + "\n")
+        else:
+            # Fallback: print to console if Twilio not configured
+            print("\n" + "="*60)
+            print("--- TWILIO NOT CONFIGURED (Console Fallback) ---")
+            print(message_body)
+            print("="*60 + "\n")
 
 # ---- CONTROLLERS / ROUTERS ----
 
@@ -165,6 +201,15 @@ def update_booking_status(booking_id: int, status: str, db: Session = Depends(ge
     db.commit()
     return {"message": f"Booking successfully updated to {status}"}
 
+@app.delete("/api/bookings/{booking_id}")
+def delete_booking(booking_id: int, db: Session = Depends(get_db)):
+    booking = db.query(BookingModel).filter(BookingModel.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking request not found.")
+    db.delete(booking)
+    db.commit()
+    return {"message": "Booking request successfully deleted"}
+
 @app.get("/api/members", response_model=List[MemberResponse])
 def get_members(db: Session = Depends(get_db)):
     return db.query(MandalMemberModel).all()
@@ -180,6 +225,15 @@ def add_member(member: MemberCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_member)
     return db_member
+
+@app.delete("/api/members/{member_id}")
+def delete_member(member_id: int, db: Session = Depends(get_db)):
+    member = db.query(MandalMemberModel).filter(MandalMemberModel.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Mandal member not found.")
+    db.delete(member)
+    db.commit()
+    return {"message": "Mandal member successfully removed"}
 
 @app.post("/api/admin/login")
 def admin_login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
