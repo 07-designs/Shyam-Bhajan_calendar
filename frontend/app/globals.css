@@ -132,23 +132,40 @@
   transform: scale(1);
 }
 
-/* Navbar gradient backdrop */
+/* Glassmorphism Navbar - Warm Devotional Gradient matching Kanhaj/* Transparent Sticky Navbar matching Kanhaji's Hero Artwork Canvas */
 .nav-gradient {
-  background: linear-gradient(135deg, #1a0a00 0%, #3b0f02 30%, #7c2d12 60%, #c2410c 100%);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid transparent;
 }
 
 .nav-scrolled {
-  background: rgba(26, 10, 0, 0.85);
+  background: rgba(20, 12, 8, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(234, 179, 8, 0.15);
+  border-bottom: 1px solid rgba(212, 160, 23, 0.2);
 }
 
-/* Hero gradient */
-.hero-gradient {
-  background: linear-gradient(135deg, #0f0500 0%, #3b0f02 25%, #7c2d12 50%, #c2410c 75%, #ea580c 100%);
-  background-size: 300% 300%;
-  animation: gradientShift 10s ease infinite;
+/* Warm Devotional Soft Cinematic Overlay */
+.hero-devotional-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(20, 12, 8, 0.92) 0%,
+    rgba(20, 12, 8, 0.72) 32%,
+    rgba(20, 12, 8, 0.35) 60%,
+    rgba(20, 12, 8, 0.08) 100%
+  );
+}
+
+.krishna-aura-glow {
+  background: radial-gradient(circle at 75% 45%, rgba(212, 160, 23, 0.28) 0%, rgba(199, 122, 26, 0.15) 50%, transparent 80%);
+}
+
+/* Smooth Linear Left-to-Right Fade Mask for Kanhaji Artwork */
+.krishna-left-fade-mask {
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.05) 5%, rgba(0, 0, 0, 0.4) 18%, rgba(0, 0, 0, 0.85) 32%, rgba(0, 0, 0, 1) 45%, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0.5) 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.05) 5%, rgba(0, 0, 0, 0.4) 18%, rgba(0, 0, 0, 0.85) 32%, rgba(0, 0, 0, 1) 45%, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0.5) 92%, transparent 100%);
 }
 
 /* Gold shimmer text */
@@ -169,5 +186,56 @@
 
 .card-lift:hover {
   transform: translateY(-6px);
-  box-shadow: 0 20px 40px rgba(124, 45, 18, 0.15);
+  box-shadow: 0 20px 40px rgba(212, 160, 23, 0.18);
+}
+
+/* Spiritual Motifs & Background Layer Utilities */
+
+/* 🪶 About Us: Faded Peacock Feather & Mandala Motif Background */
+.about-morpankh-motif {
+  background: radial-gradient(circle at 10% 20%, rgba(212, 160, 23, 0.15) 0%, rgba(199, 122, 26, 0.05) 45%, transparent 75%),
+              linear-gradient(135deg, rgba(20, 12, 8, 1) 0%, rgba(28, 18, 12, 0.95) 50%, rgba(20, 12, 8, 1) 100%);
+}
+
+.mandala-heading-bg {
+  background-image: radial-gradient(circle at center, rgba(212, 160, 23, 0.12) 0%, transparent 70%);
+}
+
+/* 🪔 Book Your Date: Temple Lamp Glow & Sacred Geometry Ambience */
+.diya-ambient-glow {
+  background: radial-gradient(circle at 50% 30%, rgba(212, 160, 23, 0.22) 0%, rgba(199, 122, 26, 0.08) 50%, transparent 80%),
+              linear-gradient(180deg, rgba(20, 12, 8, 0.98) 0%, rgba(25, 15, 10, 0.95) 50%, rgba(20, 12, 8, 0.98) 100%);
+}
+
+/* 🌸 Past Kirtan Glimpses: Lotus Petals & Bokeh Ambient Background */
+.lotus-bokeh-bg {
+  background: radial-gradient(circle at 80% 40%, rgba(234, 179, 8, 0.15) 0%, rgba(212, 160, 23, 0.05) 55%, transparent 80%),
+              radial-gradient(circle at 20% 70%, rgba(199, 122, 26, 0.12) 0%, transparent 60%);
+}
+
+/* 🙏 Contact Us: Mandala & Sacred Geometry Vignette */
+.contact-mandala-bg {
+  background: radial-gradient(circle at 50% 50%, rgba(212, 160, 23, 0.18) 0%, rgba(20, 12, 8, 0.95) 70%, rgba(12, 7, 4, 1) 100%);
+}
+
+/* ✨ Footer: Starry Night with Soft Horizon Glow */
+.footer-horizon-glow {
+  background: radial-gradient(ellipse 100% 60% at 50% 0%, rgba(212, 160, 23, 0.18) 0%, rgba(14, 8, 5, 0.95) 60%, rgba(10, 5, 3, 1) 100%);
+}
+
+/* Glassmorphism Card Utility */
+.glass-devotional-card {
+  background: rgba(28, 18, 12, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(212, 160, 23, 0.22);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-devotional-card:hover {
+  background: rgba(36, 23, 16, 0.88);
+  border-color: rgba(212, 160, 23, 0.45);
+  box-shadow: 0 20px 45px rgba(212, 160, 23, 0.15);
+  transform: translateY(-4px);
 }
