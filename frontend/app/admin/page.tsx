@@ -296,39 +296,39 @@ export default function AdminDashboard() {
   // Initial loading state presentation
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#140C08] contact-mandala-bg flex flex-col items-center justify-center p-4 text-[#F8F4EC]">
         <div className="relative flex items-center justify-center mb-4">
-          <div className="w-16 h-16 border-4 border-[#8B2607]/20 border-t-[#8B2607] rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-[#D4A017]/20 border-t-[#D4A017] rounded-full animate-spin"></div>
           <span className="absolute text-xl">🙏</span>
         </div>
-        <h2 className="text-xl font-serif font-bold text-[#8B2607] animate-pulse">
+        <h2 className="text-2xl font-serif font-bold shimmer-gold animate-pulse">
           Jai Shree Shyam
         </h2>
-        <p className="text-sm text-stone-500 mt-1">Verifying administrative credentials & loading dashboard...</p>
+        <p className="text-sm text-stone-300/80 mt-1 font-light">Verifying administrative credentials & loading dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-stone-800 font-sans pb-16">
+    <div className="min-h-screen bg-[#140C08] contact-mandala-bg text-[#F8F4EC] font-sans pb-16 relative overflow-hidden">
       
       {/* Toast Notification Container */}
       <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`pointer-events-auto px-4 py-3 rounded-lg shadow-lg border text-sm font-medium flex items-center justify-between transition-all duration-300 animate-slide-in ${
+            className={`pointer-events-auto px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium flex items-center justify-between transition-all duration-300 backdrop-blur-md ${
               toast.type === 'success'
-                ? 'bg-emerald-900 text-emerald-100 border-emerald-700'
+                ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/50'
                 : toast.type === 'error'
-                ? 'bg-rose-900 text-rose-100 border-rose-700'
-                : 'bg-stone-900 text-stone-100 border-stone-700'
+                ? 'bg-red-950/90 text-red-200 border-red-500/50'
+                : 'bg-[#1C120C]/90 text-amber-200 border-[#D4A017]/40'
             }`}
           >
             <span>{toast.message}</span>
             <button
               onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-              className="ml-3 text-xs opacity-70 hover:opacity-100"
+              className="ml-3 text-xs opacity-70 hover:opacity-100 cursor-pointer"
             >
               ✕
             </button>
@@ -336,35 +336,39 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Hero Header & Devotional Banner with Split Background Gradient */}
-      <header className="relative bg-gradient-to-r from-[#8B2E0F] via-[#C85213] via-50% to-[#132E3C] text-white shadow-md border-b border-[#8B2607]/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero Header & Devotional Banner */}
+      <header className="relative bg-gradient-to-r from-[#1C120C] via-[#2A1A10] to-[#140C08] text-[#F8F4EC] shadow-2xl border-b border-[#D4A017]/30">
+        
+        {/* Soft Ambient Orbs */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[300px] bg-[#D4A017]/10 blur-3xl rounded-full pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             
             {/* Left Section: Text Content & Title */}
             <div className="space-y-4 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-amber-200 text-xs font-semibold tracking-wider uppercase">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#D4A017]/15 border border-[#D4A017]/35 text-[#D4A017] text-xs font-semibold tracking-widest uppercase backdrop-blur-md">
                 <span>✨</span>
                 <span>JAI SHREE SHYAM</span>
                 <span>✨</span>
               </div>
               
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-amber-50 tracking-tight leading-tight">
-                Shyam Bhajan Seva
-                <span className="block text-2xl sm:text-3xl text-amber-300 font-sans font-normal mt-1">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#F8F4EC] tracking-tight leading-tight">
+                <span className="shimmer-gold">Shyam Bhajan Seva</span>
+                <span className="block text-2xl sm:text-3xl text-amber-200/90 font-sans font-light mt-1">
                   Mandal & Event Admin Portal
                 </span>
               </h1>
 
-              <p className="text-stone-200 text-sm sm:text-base max-w-xl leading-relaxed">
+              <p className="text-stone-300/90 text-sm sm:text-base max-w-xl leading-relaxed font-light">
                 Seamlessly manage bhajan event requests, roster schedules, mandal member duties, and host communications with full administrative control.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
                   onClick={() => setRefreshTrigger(prev => prev + 1)}
-                  className="px-4 py-2 rounded-lg bg-amber-500 text-stone-950 font-bold text-xs sm:text-sm shadow-md hover:bg-amber-400 active:scale-95 transition-all flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl bg-[#D4A017] text-[#2A1A10] font-bold text-xs sm:text-sm shadow-xl hover:bg-[#C77A1A] hover:text-white transition-all duration-300 flex items-center gap-2 animate-pulse-gold cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -377,9 +381,9 @@ export default function AdminDashboard() {
                     fetch(`${API_BASE}/api/admin/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
                     router.push('/login');
                   }}
-                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/25 text-white text-xs sm:text-sm font-semibold hover:border-amber-300 transition-all flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl bg-[#1C120C]/80 hover:bg-[#241710] border border-[#D4A017]/30 text-[#F8F4EC] text-xs sm:text-sm font-semibold hover:border-[#D4A017] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
                 >
-                  <svg className="w-4 h-4 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                   Exit Session
@@ -387,12 +391,12 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Right Section: Artwork & Frame Display with Soft Aura */}
+            {/* Right Section: Artwork & Frame Display */}
             <div className="relative flex justify-center lg:justify-end">
-              <div className="relative group w-full max-w-sm sm:max-w-md h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl border-2 border-amber-400/40 bg-[#0F222D]">
+              <div className="relative group w-full max-w-sm sm:max-w-md h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl border-2 border-[#D4A017]/40 bg-[#140C08]">
                 
                 {/* Glow Radial Aura Effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-teal-500/10 to-transparent pointer-events-none"></div>
+                <div className="absolute inset-0 bg-radial from-[#D4A017]/20 via-amber-900/10 to-transparent pointer-events-none"></div>
 
                 {/* Kanhaji Artwork */}
                 <img
@@ -400,19 +404,18 @@ export default function AdminDashboard() {
                   alt="Kanhaji Divine Artwork"
                   className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => {
-                    // Fallback if image path differs
                     e.currentTarget.style.display = 'none';
                   }}
                 />
 
                 {/* Edge Fading Mask Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#8B2E0F]/40 via-transparent to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#140C08]/90 via-transparent to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#140C08]/60 via-transparent to-transparent"></div>
 
-                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end text-amber-100">
+                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end text-[#F8F4EC]">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Jay Shree Khatu Shyam Ji</p>
-                    <p className="text-sm font-serif italic text-stone-200">Haare Ka Sahara, Baba Shyam Hamara</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#D4A017]">Jay Shree Khatu Shyam Ji</p>
+                    <p className="text-sm font-serif italic text-stone-300">Haare Ka Sahara, Baba Shyam Hamara</p>
                   </div>
                   <span className="text-2xl animate-pulse">🌸</span>
                 </div>
@@ -425,55 +428,55 @@ export default function AdminDashboard() {
       </header>
 
       {/* Main Dashboard Body Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 space-y-10 relative z-10">
 
         {/* 1. TOP SECTION: 4-Column Stats Overview Header */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
           
           {/* Card 1: Total Requests */}
-          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+          <div className="glass-devotional-card p-5 rounded-2xl border border-[#D4A017]/25 shadow-xl flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Total Requests</p>
-              <h3 className="text-3xl font-serif font-bold text-stone-900 mt-1">{stats.total}</h3>
-              <p className="text-xs text-stone-500 mt-1">All time bookings</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-200/80">Total Requests</p>
+              <h3 className="text-3xl font-serif font-bold text-[#F8F4EC] mt-1">{stats.total}</h3>
+              <p className="text-xs text-stone-400 mt-1 font-light">All time bookings</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#8B2607] flex items-center justify-center text-xl font-bold border border-amber-200">
+            <div className="w-12 h-12 rounded-xl bg-[#D4A017]/15 text-[#D4A017] flex items-center justify-center text-xl font-bold border border-[#D4A017]/35 shadow-inner">
               📋
             </div>
           </div>
 
           {/* Card 2: Pending Approval */}
-          <div className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+          <div className="glass-devotional-card p-5 rounded-2xl border border-amber-500/35 shadow-xl flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Pending Approval</p>
-              <h3 className="text-3xl font-serif font-bold text-amber-800 mt-1">{stats.pending}</h3>
-              <p className="text-xs text-amber-700/80 mt-1">Requires admin review</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-400">Pending Approval</p>
+              <h3 className="text-3xl font-serif font-bold text-amber-300 mt-1">{stats.pending}</h3>
+              <p className="text-xs text-amber-200/70 mt-1 font-light">Requires admin review</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl font-bold border border-amber-300">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-xl font-bold border border-amber-400/40 shadow-inner">
               ⏳
             </div>
           </div>
 
           {/* Card 3: Approved Events */}
-          <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-emerald-200 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+          <div className="glass-devotional-card p-5 rounded-2xl border border-emerald-500/35 shadow-xl flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Approved Events</p>
-              <h3 className="text-3xl font-serif font-bold text-emerald-800 mt-1">{stats.approved}</h3>
-              <p className="text-xs text-emerald-700/80 mt-1">Confirmed bhajan dates</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Approved Events</p>
+              <h3 className="text-3xl font-serif font-bold text-emerald-300 mt-1">{stats.approved}</h3>
+              <p className="text-xs text-emerald-200/70 mt-1 font-light">Confirmed bhajan dates</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl font-bold border border-emerald-300">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl font-bold border border-emerald-400/40 shadow-inner">
               ✅
             </div>
           </div>
 
           {/* Card 4: Active Mandal Members */}
-          <div className="bg-white p-5 rounded-2xl border border-indigo-200 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+          <div className="glass-devotional-card p-5 rounded-2xl border border-indigo-500/35 shadow-xl flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Active Members</p>
-              <h3 className="text-3xl font-serif font-bold text-indigo-900 mt-1">{stats.activeMembers}</h3>
-              <p className="text-xs text-indigo-700/80 mt-1">On-call performers</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-300">Active Members</p>
+              <h3 className="text-3xl font-serif font-bold text-indigo-200 mt-1">{stats.activeMembers}</h3>
+              <p className="text-xs text-indigo-200/70 mt-1 font-light">On-call performers</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center text-xl font-bold border border-indigo-300">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xl font-bold border border-indigo-400/40 shadow-inner">
               🎵
             </div>
           </div>
@@ -483,24 +486,24 @@ export default function AdminDashboard() {
         {/* 2. 2-COLUMN RESPONSIVE LAYOUT: 65% Left (Event Requests) / 35% Right (Active Roster) */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* LEFT COLUMN: 65% Width (lg:col-span-7 / xl:col-span-8) -> Incoming Event Requests Table */}
+          {/* LEFT COLUMN: 65% Width -> Incoming Event Requests Table */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-6">
             
-            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+            <div className="glass-devotional-card rounded-3xl shadow-2xl border border-[#D4A017]/30 overflow-hidden">
               
               {/* Table Header & Controls Bar */}
-              <div className="p-6 border-b border-stone-100 bg-[#FDFBF7]/60 space-y-4">
+              <div className="p-6 border-b border-[#D4A017]/20 bg-[#140C08]/70 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-serif font-bold text-[#8B2607] flex items-center gap-2">
-                      <span>🚩</span> Incoming Event Requests
+                    <h2 className="text-xl font-serif font-bold text-[#F8F4EC] flex items-center gap-2">
+                      <span>🚩</span> <span className="shimmer-gold">Incoming Event Requests</span>
                     </h2>
-                    <p className="text-xs text-stone-500 mt-0.5">
+                    <p className="text-xs text-stone-300/80 mt-0.5 font-light">
                       Review, approve, reschedule, or manage host booking requests.
                     </p>
                   </div>
 
-                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-stone-100 text-stone-600 border border-stone-200 self-start sm:self-auto">
+                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#D4A017]/15 text-[#D4A017] border border-[#D4A017]/30 self-start sm:self-auto">
                     Showing {filteredBookings.length} of {bookings.length}
                   </span>
                 </div>
@@ -515,28 +518,28 @@ export default function AdminDashboard() {
                       placeholder="Search host name, phone, date, address..."
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8B2607]/30 transition"
+                      className="w-full pl-9 pr-4 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner"
                     />
-                    <svg className="w-4 h-4 text-stone-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     {searchTerm && (
-                      <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-xs text-stone-400 hover:text-stone-600">
+                      <button onClick={() => setSearchTerm('')} className="absolute right-3 top-3 text-xs text-stone-400 hover:text-[#F8F4EC]">
                         ✕
                       </button>
                     )}
                   </div>
 
                   {/* Filter Pills */}
-                  <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                     {['All', 'Pending', 'Approved', 'Rescheduled', 'Rejected'].map(status => (
                       <button
                         key={status}
                         onClick={() => setStatusFilter(status)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                           statusFilter === status
-                            ? 'bg-[#8B2607] text-white shadow-sm'
-                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                            ? 'bg-[#D4A017] text-[#2A1A10] shadow-md'
+                            : 'bg-[#140C08] text-stone-300 border border-[#D4A017]/20 hover:border-[#D4A017]/50'
                         }`}
                       >
                         {status}
@@ -551,23 +554,23 @@ export default function AdminDashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="bg-stone-100/70 text-stone-700 font-bold border-b border-stone-200 text-xs uppercase tracking-wider">
-                      <th className="py-3.5 px-4">Host Name</th>
-                      <th className="py-3.5 px-4">Date</th>
-                      <th className="py-3.5 px-4">Contact</th>
-                      <th className="py-3.5 px-4">Address / Location</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    <tr className="bg-[#140C08]/90 text-[#D4A017] font-bold border-b border-[#D4A017]/25 text-xs uppercase tracking-wider">
+                      <th className="py-4 px-4">Host Name</th>
+                      <th className="py-4 px-4">Date</th>
+                      <th className="py-4 px-4">Contact</th>
+                      <th className="py-4 px-4">Address / Location</th>
+                      <th className="py-4 px-4">Status</th>
+                      <th className="py-4 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-100">
+                  <tbody className="divide-y divide-[#D4A017]/15">
                     {filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-stone-500">
+                        <td colSpan={6} className="py-12 text-center text-stone-400">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <span className="text-3xl">📭</span>
-                            <p className="font-semibold text-stone-700">No booking requests found</p>
-                            <p className="text-xs text-stone-400">
+                            <p className="font-semibold text-[#F8F4EC]">No booking requests found</p>
+                            <p className="text-xs text-stone-400 font-light">
                               {searchTerm || statusFilter !== 'All'
                                 ? 'Try adjusting your search terms or filter selection.'
                                 : 'New event requests submitted by devotees will appear here.'}
@@ -577,65 +580,65 @@ export default function AdminDashboard() {
                       </tr>
                     ) : (
                       filteredBookings.map(b => (
-                        <tr key={b.id} className="hover:bg-amber-50/30 transition-colors">
+                        <tr key={b.id} className="hover:bg-[#241710]/70 transition-colors">
                           
                           {/* Host Name */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-stone-900">{b.full_name}</div>
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-[#F8F4EC]">{b.full_name}</div>
                             {b.alt_phone && (
-                              <div className="text-[11px] text-stone-500">Alt: {b.alt_phone}</div>
+                              <div className="text-[11px] text-stone-400">Alt: {b.alt_phone}</div>
                             )}
                           </td>
 
                           {/* Requested Date */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="font-semibold text-stone-800 bg-stone-100 px-2 py-1 rounded text-xs">
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="font-semibold text-amber-200 bg-[#140C08] border border-[#D4A017]/30 px-2.5 py-1 rounded-lg text-xs">
                               {b.booking_date}
                             </span>
                           </td>
 
                           {/* Phone Contact */}
-                          <td className="py-3.5 px-4 whitespace-nowrap text-stone-700">
-                            <a href={`tel:${b.phone}`} className="hover:text-[#8B2607] hover:underline flex items-center gap-1 font-mono text-xs">
+                          <td className="py-4 px-4 whitespace-nowrap text-stone-300">
+                            <a href={`tel:${b.phone}`} className="hover:text-[#D4A017] hover:underline flex items-center gap-1 font-mono text-xs">
                               <span>📞</span> {b.phone}
                             </a>
                           </td>
 
                           {/* Location/Address */}
-                          <td className="py-3.5 px-4 text-stone-600 max-w-xs truncate" title={b.address}>
+                          <td className="py-4 px-4 text-stone-300 max-w-xs truncate font-light" title={b.address}>
                             {b.address}
                           </td>
 
                           {/* Status Badge */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
+                          <td className="py-4 px-4 whitespace-nowrap">
                             {b.status === 'Pending' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-400/40 inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                                 Pending
                               </span>
                             )}
                             {b.status === 'Approved' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                                 Approved
                               </span>
                             )}
                             {b.status === 'Rescheduled' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/40 inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
                                 Rescheduled
                               </span>
                             )}
                             {b.status === 'Rejected' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-400/40 inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
                                 Rejected
                               </span>
                             )}
                           </td>
 
                           {/* Action Buttons */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <td className="py-4 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               
                               {/* Pending Specific Actions */}
@@ -644,7 +647,7 @@ export default function AdminDashboard() {
                                   <button
                                     disabled={actionLoadingId === b.id}
                                     onClick={() => handleStatusChange(b.id, 'Approved')}
-                                    className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm transition active:scale-95 disabled:opacity-50"
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow-md transition active:scale-95 disabled:opacity-50 cursor-pointer"
                                   >
                                     Approve
                                   </button>
@@ -654,7 +657,7 @@ export default function AdminDashboard() {
                                       setRescheduleBooking(b);
                                       setNewRescheduleDate(b.booking_date);
                                     }}
-                                    className="bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 text-xs px-2.5 py-1 rounded-lg font-semibold transition"
+                                    className="bg-[#140C08] border border-[#D4A017]/30 text-stone-200 hover:border-[#D4A017] hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
                                   >
                                     Reschedule
                                   </button>
@@ -665,7 +668,7 @@ export default function AdminDashboard() {
                                       id: b.id,
                                       title: `Reject booking for ${b.full_name}?`
                                     })}
-                                    className="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs px-2 py-1 rounded-lg font-semibold transition"
+                                    className="bg-rose-950/60 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
                                     title="Reject / Delete"
                                   >
                                     Reject
@@ -678,7 +681,7 @@ export default function AdminDashboard() {
                                 <>
                                   <button
                                     onClick={() => setSelectedBooking(b)}
-                                    className="bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs px-2.5 py-1 rounded-lg font-semibold transition border border-stone-200"
+                                    className="bg-[#140C08] hover:bg-[#241710] text-amber-200 border border-[#D4A017]/30 text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer"
                                   >
                                     View Details
                                   </button>
@@ -689,7 +692,7 @@ export default function AdminDashboard() {
                                       id: b.id,
                                       title: `Cancel & remove approved booking for ${b.full_name}?`
                                     })}
-                                    className="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs px-2 py-1 rounded-lg font-semibold transition"
+                                    className="bg-rose-950/60 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -701,7 +704,7 @@ export default function AdminDashboard() {
                                 <>
                                   <button
                                     onClick={() => setSelectedBooking(b)}
-                                    className="bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs px-2 py-1 rounded-lg font-semibold transition border border-stone-200"
+                                    className="bg-[#140C08] hover:bg-[#241710] text-amber-200 border border-[#D4A017]/30 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
                                   >
                                     Details
                                   </button>
@@ -712,7 +715,7 @@ export default function AdminDashboard() {
                                       id: b.id,
                                       title: `Delete record for ${b.full_name}?`
                                     })}
-                                    className="text-stone-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition"
+                                    className="text-stone-400 hover:text-rose-400 p-1.5 rounded hover:bg-rose-950/40 transition cursor-pointer"
                                     title="Delete Record"
                                   >
                                     🗑️
@@ -734,24 +737,24 @@ export default function AdminDashboard() {
 
           </div>
 
-          {/* RIGHT COLUMN: 35% Width (lg:col-span-5 / xl:col-span-4) -> Active Roster & Member Management */}
+          {/* RIGHT COLUMN: 35% Width -> Active Roster & Member Management */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-6">
             
             {/* Form: Add New Member */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 space-y-4">
-              <div className="border-b border-stone-100 pb-3">
-                <h2 className="text-lg font-serif font-bold text-[#8B2607] flex items-center gap-2">
-                  <span>👤</span> Add Mandal Member
+            <div className="glass-devotional-card p-6 rounded-3xl shadow-2xl border border-[#D4A017]/30 space-y-4">
+              <div className="border-b border-[#D4A017]/20 pb-3">
+                <h2 className="text-lg font-serif font-bold text-[#F8F4EC] flex items-center gap-2">
+                  <span>👤</span> <span className="shimmer-gold">Add Mandal Member</span>
                 </h2>
-                <p className="text-xs text-stone-500">Register new performers, singers, or instrument artists.</p>
+                <p className="text-xs text-stone-300/80 font-light">Register new performers, singers, or instrument artists.</p>
               </div>
 
               <form onSubmit={handleAddMember} className="space-y-4">
                 
                 {/* Member Name */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Full Name <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">
+                    Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -759,14 +762,14 @@ export default function AdminDashboard() {
                     placeholder="e.g., Rajesh Sharma"
                     value={newMember.name}
                     onChange={e => setNewMember({ ...newMember, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8B2607]/30 transition"
+                    className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner"
                   />
                 </div>
 
                 {/* Contact Phone */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Contact Phone (10 Digits) <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">
+                    Contact Phone (10 Digits) <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="tel"
@@ -775,22 +778,22 @@ export default function AdminDashboard() {
                     placeholder="e.g., 9876543210"
                     value={newMember.phone}
                     onChange={e => setNewMember({ ...newMember, phone: e.target.value.replace(/\D/g, '') })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8B2607]/30 transition font-mono"
+                    className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner font-mono"
                   />
                 </div>
 
                 {/* Role Dropdown */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Mandal Duty / Role <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">
+                    Mandal Duty / Role <span className="text-rose-400">*</span>
                   </label>
                   <select
                     value={newMember.role}
                     onChange={e => setNewMember({ ...newMember, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8B2607]/30 transition"
+                    className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] transition shadow-inner cursor-pointer"
                   >
                     {MANDAL_ROLES.map(role => (
-                      <option key={role} value={role}>{role}</option>
+                      <option key={role} value={role} className="bg-[#140C08] text-[#F8F4EC]">{role}</option>
                     ))}
                   </select>
                 </div>
@@ -798,27 +801,27 @@ export default function AdminDashboard() {
                 {/* Custom Role Input if 'Other / Custom' selected */}
                 {newMember.role === 'Other / Custom' && (
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">Specify Role Title</label>
+                    <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">Specify Role Title</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g., Keyboardist / Flutist"
                       value={newMember.customRole}
                       onChange={e => setNewMember({ ...newMember, customRole: e.target.value })}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8B2607]/30 transition"
+                      className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner"
                     />
                   </div>
                 )}
 
-                {/* Submit Button with Loading Spinner */}
+                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={addingMember}
-                  className="w-full bg-[#8B2607] hover:bg-[#701E05] text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow transition duration-200 flex items-center justify-center gap-2 disabled:opacity-60 active:scale-98"
+                  className="w-full bg-[#D4A017] text-[#2A1A10] hover:bg-[#C77A1A] hover:text-white font-bold py-3 px-4 rounded-xl text-sm shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 active:scale-98 cursor-pointer animate-pulse-gold"
                 >
                   {addingMember ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-[#2A1A10]/30 border-t-[#2A1A10] rounded-full animate-spin"></div>
                       <span>Saving Member...</span>
                     </>
                   ) : (
@@ -833,48 +836,48 @@ export default function AdminDashboard() {
             </div>
 
             {/* List: Active Mandal Roster */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 space-y-4">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <h2 className="text-lg font-serif font-bold text-stone-900 flex items-center gap-2">
-                  <span>🪕</span> Active Roster
+            <div className="glass-devotional-card p-6 rounded-3xl shadow-2xl border border-[#D4A017]/30 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#D4A017]/20 pb-3">
+                <h2 className="text-lg font-serif font-bold text-[#F8F4EC] flex items-center gap-2">
+                  <span>🪕</span> <span className="shimmer-gold">Active Roster</span>
                 </h2>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#D4A017]/20 text-[#D4A017] border border-[#D4A017]/40">
                   {members.length} Members
                 </span>
               </div>
 
               {members.length === 0 ? (
-                <div className="py-8 text-center text-stone-500">
+                <div className="py-8 text-center text-stone-400">
                   <p className="text-sm font-semibold">No active members registered</p>
-                  <p className="text-xs text-stone-400 mt-1">Use the form above to build your mandal team roster.</p>
+                  <p className="text-xs text-stone-400 mt-1 font-light">Use the form above to build your mandal team roster.</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                   {members.map(member => (
                     <div
                       key={member.id}
-                      className="p-3.5 bg-stone-50/80 rounded-xl border border-stone-200 hover:border-amber-300 hover:bg-amber-50/20 transition-all flex items-center justify-between group"
+                      className="p-3.5 bg-[#140C08]/80 rounded-2xl border border-[#D4A017]/20 hover:border-[#D4A017]/50 hover:bg-[#241710] transition-all flex items-center justify-between group shadow-sm"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-bold text-stone-900 text-sm">{member.name}</p>
-                          <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                          <p className="font-bold text-[#F8F4EC] text-sm">{member.name}</p>
+                          <span className="bg-[#D4A017]/20 text-[#D4A017] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D4A017]/35">
                             {member.role}
                           </span>
                         </div>
-                        <p className="text-xs font-mono text-stone-600 flex items-center gap-1">
+                        <p className="text-xs font-mono text-stone-300 flex items-center gap-1 font-light">
                           <span>📞</span> {member.phone}
                         </p>
                       </div>
 
-                      {/* Remove / Delete Member Button with Hover Transition to text-rose-600 */}
+                      {/* Remove Member Button */}
                       <button
                         onClick={() => setDeleteConfirmation({
                           type: 'member',
                           id: member.id,
                           title: `Remove ${member.name} from active roster?`
                         })}
-                        className="text-stone-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-colors group-hover:opacity-100"
+                        className="text-stone-400 hover:text-rose-400 hover:bg-rose-950/40 p-2 rounded-lg transition-colors cursor-pointer"
                         title="Remove Member"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -896,56 +899,56 @@ export default function AdminDashboard() {
 
       {/* Modal 1: Booking Event Details View */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 space-y-5 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="glass-devotional-card rounded-3xl max-w-lg w-full p-7 shadow-2xl border border-[#D4A017]/40 text-[#F8F4EC] space-y-5 relative">
             <button
               onClick={() => setSelectedBooking(null)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-stone-100"
+              className="absolute top-4 right-4 text-stone-400 hover:text-[#F8F4EC] text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#241710] transition-colors cursor-pointer"
             >
               ✕
             </button>
 
-            <div className="border-b border-stone-100 pb-3">
-              <span className="text-xs font-bold text-[#8B2607] uppercase tracking-wider">Event Details</span>
-              <h3 className="text-xl font-serif font-bold text-stone-900 mt-0.5">{selectedBooking.full_name}</h3>
+            <div className="border-b border-[#D4A017]/20 pb-3">
+              <span className="text-xs font-bold text-[#D4A017] uppercase tracking-wider">Event Details</span>
+              <h3 className="text-xl font-serif font-bold text-[#F8F4EC] mt-0.5">{selectedBooking.full_name}</h3>
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-3 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
+              <div className="grid grid-cols-2 gap-3 bg-[#140C08] p-3.5 rounded-xl border border-[#D4A017]/25">
                 <div>
-                  <p className="text-xs font-semibold text-stone-500">Requested Date</p>
-                  <p className="font-bold text-stone-900 mt-0.5">{selectedBooking.booking_date}</p>
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Requested Date</p>
+                  <p className="font-bold text-amber-200 mt-0.5">{selectedBooking.booking_date}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-stone-500">Current Status</p>
-                  <p className="font-bold text-stone-900 mt-0.5">{selectedBooking.status}</p>
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Current Status</p>
+                  <p className="font-bold text-[#F8F4EC] mt-0.5">{selectedBooking.status}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-stone-500">Primary Contact Phone</p>
-                <p className="font-mono text-stone-800 mt-0.5">{selectedBooking.phone}</p>
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Primary Contact Phone</p>
+                <p className="font-mono text-stone-200 mt-0.5">{selectedBooking.phone}</p>
               </div>
 
               {selectedBooking.alt_phone && (
                 <div>
-                  <p className="text-xs font-semibold text-stone-500">Alternate Phone</p>
-                  <p className="font-mono text-stone-800 mt-0.5">{selectedBooking.alt_phone}</p>
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Alternate Phone</p>
+                  <p className="font-mono text-stone-200 mt-0.5">{selectedBooking.alt_phone}</p>
                 </div>
               )}
 
               <div>
-                <p className="text-xs font-semibold text-stone-500">Event Address / Location</p>
-                <p className="text-stone-800 mt-0.5 bg-stone-50 p-3 rounded-lg border border-stone-200 leading-relaxed whitespace-pre-wrap">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Event Address / Location</p>
+                <p className="text-stone-200 mt-0.5 bg-[#140C08] p-3.5 rounded-xl border border-[#D4A017]/25 leading-relaxed whitespace-pre-wrap font-light">
                   {selectedBooking.address}
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#D4A017]/20">
               <button
                 onClick={() => setSelectedBooking(null)}
-                className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-lg text-xs transition"
+                className="px-4 py-2 bg-[#140C08] hover:bg-[#241710] text-[#F8F4EC] border border-[#D4A017]/30 font-semibold rounded-xl text-xs transition cursor-pointer"
               >
                 Close Details
               </button>
@@ -956,43 +959,43 @@ export default function AdminDashboard() {
 
       {/* Modal 2: Reschedule Date Picker */}
       {rescheduleBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="glass-devotional-card rounded-3xl max-w-md w-full p-7 shadow-2xl border border-[#D4A017]/40 text-[#F8F4EC] space-y-5 relative">
             <button
               onClick={() => setRescheduleBooking(null)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-stone-100"
+              className="absolute top-4 right-4 text-stone-400 hover:text-[#F8F4EC] font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#241710] transition-colors cursor-pointer"
             >
               ✕
             </button>
 
             <div>
-              <h3 className="text-lg font-serif font-bold text-[#8B2607]">Reschedule Event</h3>
-              <p className="text-xs text-stone-500">Select a new date for {rescheduleBooking.full_name}'s bhajan seva.</p>
+              <h3 className="text-xl font-serif font-bold text-[#D4A017]">Reschedule Event</h3>
+              <p className="text-xs text-stone-300/80 font-light mt-1">Select a new date for {rescheduleBooking.full_name}'s bhajan seva.</p>
             </div>
 
-            <form onSubmit={handleRescheduleSubmit} className="space-y-4">
+            <form onSubmit={handleRescheduleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">New Event Date</label>
+                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">New Event Date</label>
                 <input
                   type="date"
                   required
                   value={newRescheduleDate}
                   onChange={e => setNewRescheduleDate(e.target.value)}
-                  className="w-full p-2.5 border border-stone-300 rounded-lg text-sm bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#8B2607]/30"
+                  className="w-full p-3 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017]"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setRescheduleBooking(null)}
-                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-lg text-xs transition"
+                  className="px-4 py-2.5 bg-[#140C08] hover:bg-[#241710] text-[#F8F4EC] border border-[#D4A017]/30 font-semibold rounded-xl text-xs transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#8B2607] hover:bg-[#701E05] text-white font-bold rounded-lg text-xs transition shadow"
+                  className="px-5 py-2.5 bg-[#D4A017] text-[#2A1A10] hover:bg-[#C77A1A] hover:text-white font-bold rounded-xl text-xs transition shadow-lg cursor-pointer"
                 >
                   Confirm Reschedule
                 </button>
@@ -1004,21 +1007,21 @@ export default function AdminDashboard() {
 
       {/* Modal 3: Confirmation Popover / Dialog for Delete Actions */}
       {deleteConfirmation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 space-y-4 text-center">
-            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-bold mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="glass-devotional-card rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#D4A017]/40 text-[#F8F4EC] space-y-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-300 flex items-center justify-center text-2xl font-bold mx-auto shadow-md">
               ⚠️
             </div>
 
             <div>
-              <h3 className="text-base font-bold text-stone-900">{deleteConfirmation.title}</h3>
-              <p className="text-xs text-stone-500 mt-1">This action cannot be undone.</p>
+              <h3 className="text-base font-bold text-[#F8F4EC]">{deleteConfirmation.title}</h3>
+              <p className="text-xs text-stone-400 mt-1 font-light">This action cannot be undone.</p>
             </div>
 
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => setDeleteConfirmation(null)}
-                className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-lg text-xs transition flex-1"
+                className="px-4 py-2.5 bg-[#140C08] hover:bg-[#241710] text-[#F8F4EC] border border-[#D4A017]/30 font-semibold rounded-xl text-xs transition flex-1 cursor-pointer"
               >
                 Keep Record
               </button>
@@ -1030,7 +1033,7 @@ export default function AdminDashboard() {
                     handleDeleteMember(deleteConfirmation.id);
                   }
                 }}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs transition shadow flex-1"
+                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-lg flex-1 cursor-pointer"
               >
                 Yes, Delete
               </button>
