@@ -1,64 +1,120 @@
-import hashlib
-import jwt
-from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks, status
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database import get_db
 from app.models.models import AdminModel
-from app.schemas.schemas import LoginRequest, AdminCreate
+from app.schemas.schemas import (
+    LoginRequest,
+    LoginResponse,
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
+    VerifyOTPRequest,
+    AdminResponse,
+)
+from app.services.auth_service import AuthService
+from app.auth.dependencies import get_current_admin
 
-router = APIRouter(prefix="/api/admin", tags=["Authentication"])
+router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
-@router.post("/login")
-def admin_login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
+@router.post("/login", response_model=LoginResponse)
+def login(
+    data: LoginRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
     """
-    Authenticate administrative credentials and set httpOnly session cookie.
-    Reads master admin parameters strictly from config.py.
+    Authenticate admin credentials.
+    Enforces 5 failed attempts -> 15-minute account lockout.
+    Detects `must_change_password` first-time login status.
+    Sets httpOnly session cookies.
     """
-    input_hash = hashlib.sha256(data.password.encode('utf-8')).hexdigest()
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    user_agent = request.headers.get("user-agent", "Unknown")
 
-    # Validate Master Credentials from Settings Config
-    if data.username != settings.ADMIN_USERNAME or input_hash != settings.ADMIN_PASSWORD_HASH:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-
-    # Generate JWT Token
-    expiration = datetime.utcnow() + timedelta(days=1)
-    token = jwt.encode(
-        {"role": "admin", "username": data.username, "exp": expiration},
-        settings.JWT_SECRET,
-        algorithm="HS256"
+    result = AuthService.authenticate_admin(
+        db=db,
+        username=data.username,
+        password=data.password,
+        response=response,
+        ip_address=ip_address,
+        user_agent=user_agent
     )
-
-    # Set Cookie
-    response.set_cookie(
-        key="admin_session",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=False
-    )
-
-    return {"message": "Login successful"}
+    return result
 
 
 @router.post("/logout")
-def admin_logout(response: Response):
-    """Clear admin session cookie."""
+def logout(response: Response):
+    """Clear admin session cookies."""
     response.delete_cookie(key="admin_session")
+    response.delete_cookie(key="admin_refresh")
     return {"message": "Logged out successfully"}
 
 
-@router.post("/create-new")
-def create_new_admin(data: AdminCreate, db: Session = Depends(get_db)):
-    """Register a new admin account."""
-    existing = db.query(AdminModel).filter(AdminModel.username == data.username).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Username already exists.")
+@router.get("/me", response_model=AdminResponse)
+def get_current_user_profile(current_admin: AdminModel = Depends(get_current_admin)):
+    """Retrieve logged-in admin's profile data."""
+    return current_admin
 
-    new_admin = AdminModel(username=data.username, password=data.password, name=data.name)
-    db.add(new_admin)
-    db.commit()
-    return {"message": f"Successfully created admin account for {data.name}"}
+
+@router.post("/change-password")
+def change_password(
+    data: ChangePasswordRequest,
+    request: Request,
+    current_admin: AdminModel = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Update logged-in admin's password.
+    Enforces minimum password security rules and resets `must_change_password = False`.
+    """
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    AuthService.change_password(
+        db=db,
+        admin=current_admin,
+        new_password=data.new_password,
+        current_password=data.current_password,
+        ip_address=ip_address
+    )
+    return {"message": "Password changed successfully. You may now access all features."}
+
+
+@router.post("/forgot-password")
+def request_forgot_password_otp(
+    data: ForgotPasswordRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate and send 6-digit WhatsApp OTP for password reset.
+    """
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    AuthService.request_whatsapp_otp(
+        db=db,
+        username=data.username,
+        background_tasks=background_tasks,
+        ip_address=ip_address
+    )
+    return {"message": "If the username exists, a 6-digit OTP has been sent via WhatsApp."}
+
+
+@router.post("/verify-otp")
+def verify_otp_and_reset(
+    data: VerifyOTPRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify WhatsApp OTP code and set a new password.
+    """
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    AuthService.verify_otp_and_reset(
+        db=db,
+        username=data.username,
+        otp_code=data.otp_code,
+        new_password=data.new_password,
+        ip_address=ip_address
+    )
+    return {"message": "Password reset successfully. You may now log in with your new password."}

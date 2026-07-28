@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "shyam_bhajan_admin"
     ADMIN_PASSWORD_HASH: Optional[str] = None
     JWT_SECRET: str = "shyam_bhajan_seva_secret_key_2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Security Lockout Parameters
+    MAX_FAILED_LOGIN_ATTEMPTS: int = 5
+    ACCOUNT_LOCKOUT_MINUTES: int = 15
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -41,7 +48,7 @@ class Settings(BaseSettings):
         return url
 
     @property
-    def admin_whatsapp_numbers(self) -> list[str]:
+    def admin_whatsapp_numbers(self) -> List[str]:
         """
         Parse comma-separated ADMIN_WHATSAPP_NUMBER string into a clean list of numbers.
         Supports 1, 2, 3 or more admin WhatsApp recipients.
