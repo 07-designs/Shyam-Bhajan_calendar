@@ -1,1003 +1,1028 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 
-// API Base URL (falls back to local backend port)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-// ---- TYPES ----
-export interface Booking {
+interface Booking {
   id: number;
   full_name: string;
-  address: string;
   phone: string;
-  alt_phone?: string | null;
+  alt_phone?: string;
+  address: string;
   booking_date: string;
-  status: 'Pending' | 'Approved' | 'Rescheduled' | 'Rejected' | string;
+  status: string;
 }
 
-export interface Member {
+interface MandalMember {
   id: number;
   name: string;
   phone: string;
   role: string;
 }
 
-export interface Toast {
-  id: string;
-  type: 'success' | 'error' | 'info';
-  message: string;
+interface AdminUser {
+  id: number;
+  full_name: string;
+  username?: string;
+  phone_number: string;
+  email?: string;
+  role: string;
+  is_active: boolean;
+  must_change_password: boolean;
+  last_login?: string;
+  created_at: string;
+  created_by?: string;
 }
 
-// Pre-defined role options for the Mandal member form
-const MANDAL_ROLES = [
-  'Lead Singer',
-  'Co-Singer',
-  'Harmonium Player',
-  'Dholak Player',
-  'Tabla Player',
-  'Octapad Player',
-  'Sound Engineer',
-  'Event Coordinator',
-  'Other / Custom'
-];
+interface AuditLog {
+  id: number;
+  timestamp: string;
+  user_username: string;
+  action: string;
+  details: string;
+  ip_address: string;
+}
+
+interface MandalSettings {
+  id: number;
+  mandal_name: string;
+  whatsapp_contact: string;
+  admin_notification_numbers: string;
+  booking_auto_reply_template: string;
+  website_contact_numbers: string;
+}
+
+// Relative "Time Ago" helper with UTC timezone awareness
+function formatTimeAgo(dateString?: string) {
+  if (!dateString) return 'Never';
+
+  // If string lacks timezone indicator ('Z' or '+'), append 'Z' so JS parses as UTC
+  let isoStr = dateString.trim();
+  if (!isoStr.endsWith('Z') && !isoStr.includes('+')) {
+    isoStr = isoStr + 'Z';
+  }
+
+  const date = new Date(isoStr);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 10 || seconds < 0) return 'Just now';
+  if (seconds < 60) return `${seconds} sec${seconds > 1 ? 's' : ''} ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString();
+}
 
 export default function AdminDashboard() {
-  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+  const [activeTab, setActiveTab] = useState<'bookings' | 'roster' | 'admins' | 'settings' | 'audit'>('bookings');
 
-  // Core Data States
+  // Bookings & Roster State
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [members, setMembers] = useState<MandalMember[]>([]);
+  
+  // Admin Management State
+  const [adminsList, setAdminsList] = useState<AdminUser[]>([]);
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminPhone, setNewAdminPhone] = useState('');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminRole, setNewAdminRole] = useState('admin');
+  
+  // Newly Generated Invite Link Modal
+  const [createdInviteResult, setCreatedInviteResult] = useState<{ invite_link: string } | null>(null);
 
-  // Form & Interaction States
-  const [newMember, setNewMember] = useState({ name: '', phone: '', role: 'Lead Singer', customRole: '' });
-  const [addingMember, setAddingMember] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  // Dynamic Settings State
+  const [mandalSettings, setMandalSettings] = useState<MandalSettings | null>(null);
+  const [settingsMsg, setSettingsMsg] = useState('');
 
-  // Filters & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  // Security Audit Logs State
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditSearch, setAuditSearch] = useState('');
 
-  // Modals & Popovers State
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
-  const [newRescheduleDate, setNewRescheduleDate] = useState('');
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{
-    type: 'booking' | 'member';
-    id: number;
-    title: string;
-  } | null>(null);
+  // UI & Filter States
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [newMember, setNewMember] = useState({ name: '', phone: '', role: 'Singer' });
 
-  // Notification Toasts State
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, type, message }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
-  };
-
-  // 1. Initial Load & Session Validation
+  // 1. Fetch Profile & Data on Mount
   useEffect(() => {
-    const initializeAdmin = async () => {
-      try {
-        const [bookingsRes, membersRes] = await Promise.all([
-          fetch(`${API_BASE}/api/bookings`, { credentials: 'include' }),
-          fetch(`${API_BASE}/api/members`, { credentials: 'include' })
-        ]);
+    fetchProfile();
+    fetchBookings();
+    fetchMembers();
+    fetchSettings();
+  }, []);
 
-        if (bookingsRes.status === 401 || membersRes.status === 401) {
-          addToast('Session expired. Redirecting to login...', 'error');
-          router.push('/login');
-          return;
-        }
+  useEffect(() => {
+    if (currentUser?.role === 'super_admin') {
+      if (activeTab === 'admins') fetchAdmins();
+      if (activeTab === 'settings') fetchSettings();
+      if (activeTab === 'audit') fetchAuditLogs();
+    }
+  }, [activeTab, currentUser]);
 
-        if (bookingsRes.ok) {
-          const bookingsData = await bookingsRes.json();
-          setBookings(bookingsData);
-        } else {
-          addToast('Failed to load event bookings', 'error');
-        }
-
-        if (membersRes.ok) {
-          const membersData = await membersRes.json();
-          setMembers(membersData);
-        } else {
-          addToast('Failed to load mandal roster', 'error');
-        }
-      } catch (error) {
-        console.error('Error initializing admin session:', error);
-        addToast('Unable to connect to backend server. Ensure API is running.', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAdmin();
-  }, [refreshTrigger, router]);
-
-  // 2. Calculated Statistics Overview
-  const stats = useMemo(() => {
-    const total = bookings.length;
-    const pending = bookings.filter(b => b.status === 'Pending').length;
-    const approved = bookings.filter(b => b.status === 'Approved').length;
-    const activeMembers = members.length;
-    return { total, pending, approved, activeMembers };
-  }, [bookings, members]);
-
-  // 3. Filtered & Searched Bookings
-  const filteredBookings = useMemo(() => {
-    return bookings.filter(b => {
-      const matchesSearch =
-        b.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.phone.includes(searchTerm) ||
-        b.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.booking_date.includes(searchTerm);
-
-      const matchesStatus = statusFilter === 'All' || b.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [bookings, searchTerm, statusFilter]);
-
-  // 4. API Handler: Status Update (Approve / Reschedule / Reject)
-  const handleStatusChange = async (id: number, newStatus: string) => {
-    setActionLoadingId(id);
+  const fetchProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/bookings/${id}/status?status=${encodeURIComponent(newStatus)}`, {
-        method: 'PATCH',
-        credentials: 'include'
-      });
-
+      const res = await fetch('http://localhost:8000/api/auth/me', { credentials: 'include' });
       if (res.ok) {
-        addToast(`Booking status updated to "${newStatus}"`, 'success');
-        setRefreshTrigger(prev => prev + 1);
-        if (selectedBooking?.id === id) {
-          setSelectedBooking(prev => prev ? { ...prev, status: newStatus } : null);
-        }
+        const data = await res.json();
+        setCurrentUser(data);
       } else {
-        const errData = await res.json().catch(() => ({}));
-        addToast(errData.detail || 'Failed to update booking status', 'error');
+        window.location.href = '/login';
       }
-    } catch (error) {
-      addToast('Network error while updating status', 'error');
-    } finally {
-      setActionLoadingId(null);
+    } catch {
+      window.location.href = '/login';
     }
   };
 
-  // 5. API Handler: Reschedule Request
-  const handleRescheduleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rescheduleBooking || !newRescheduleDate) return;
-
-    setActionLoadingId(rescheduleBooking.id);
+  const fetchBookings = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/bookings/${rescheduleBooking.id}/status?status=Rescheduled`, {
-        method: 'PATCH',
-        credentials: 'include'
-      });
-
+      const res = await fetch('http://localhost:8000/api/bookings', { credentials: 'include' });
       if (res.ok) {
-        addToast(`Event rescheduled for ${rescheduleBooking.full_name}`, 'success');
-        setRescheduleBooking(null);
-        setNewRescheduleDate('');
-        setRefreshTrigger(prev => prev + 1);
-      } else {
-        addToast('Failed to reschedule event', 'error');
+        const data = await res.json();
+        setBookings(data);
       }
-    } catch (error) {
-      addToast('Error communicating with backend server', 'error');
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
     } finally {
-      setActionLoadingId(null);
+      setIsLoading(false);
     }
   };
 
-  // 6. API Handler: Delete Booking Request
+  const fetchMembers = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/members', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setMembers(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch members:', err);
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/admins', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminsList(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch admins list:', err);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setMandalSettings(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch settings:', err);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/audit', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch audit logs:', err);
+    }
+  };
+
+  // 2. Booking Status Updates
+  const handleUpdateStatus = async (id: number, newStatus: string) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/bookings/${id}/status?status_str=${newStatus}`, {
+        method: 'PATCH',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        fetchBookings();
+      }
+    } catch (err) {
+      alert('Failed to update booking status');
+    }
+  };
+
   const handleDeleteBooking = async (id: number) => {
-    setActionLoadingId(id);
+    if (!confirm('Are you sure you want to delete this booking request?')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/bookings/${id}`, {
+      const res = await fetch(`http://localhost:8000/api/bookings/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-
       if (res.ok) {
-        addToast('Booking request deleted successfully', 'success');
-        setRefreshTrigger(prev => prev + 1);
-        if (selectedBooking?.id === id) setSelectedBooking(null);
-      } else {
-        addToast('Failed to delete booking request', 'error');
+        fetchBookings();
       }
-    } catch (error) {
-      addToast('Error while deleting booking', 'error');
-    } finally {
-      setActionLoadingId(null);
-      setDeleteConfirmation(null);
+    } catch (err) {
+      alert('Failed to delete booking');
     }
   };
 
-  // 7. API Handler: Add Mandal Member
+  // 3. Add Member to Mandal Roster
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const selectedRole = newMember.role === 'Other / Custom' ? newMember.customRole : newMember.role;
-
-    if (!newMember.name.trim()) {
-      addToast('Please enter member full name', 'error');
-      return;
-    }
-
-    const cleanPhone = newMember.phone.trim();
-    if (!/^\d{10}$/.test(cleanPhone.replace(/[- ]/g, ''))) {
-      addToast('Please enter a valid 10-digit contact number', 'error');
-      return;
-    }
-
-    if (!selectedRole.trim()) {
-      addToast('Please select or specify a mandal role', 'error');
-      return;
-    }
-
-    setAddingMember(true);
     try {
-      const res = await fetch(`${API_BASE}/api/members`, {
+      const res = await fetch('http://localhost:8000/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newMember)
+      });
+      if (res.ok) {
+        setNewMember({ name: '', phone: '', role: 'Singer' });
+        fetchMembers();
+      }
+    } catch (err) {
+      alert('Failed to add member');
+    }
+  };
+
+  const handleDeleteMember = async (id: number) => {
+    if (!confirm('Remove member from active mandal roster?')) return;
+    try {
+      const res = await fetch(`http://localhost:8000/api/members/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        fetchMembers();
+      }
+    } catch (err) {
+      alert('Failed to remove member');
+    }
+  };
+
+  // 4. Super Admin: Invite Admin (WhatsApp Invite Link Flow)
+  const handleInviteAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('http://localhost:8000/api/admins/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: newMember.name.trim(),
-          phone: cleanPhone,
-          role: selectedRole.trim()
+          full_name: newAdminName,
+          phone_number: newAdminPhone,
+          email: newAdminEmail || undefined,
+          role: newAdminRole
         })
       });
 
+      const data = await res.json();
       if (res.ok) {
-        addToast(`Added ${newMember.name} to active roster`, 'success');
-        setNewMember({ name: '', phone: '', role: 'Lead Singer', customRole: '' });
-        setRefreshTrigger(prev => prev + 1);
+        setCreatedInviteResult({ invite_link: data.invite_link });
+        setShowAddAdminModal(false);
+        setNewAdminName('');
+        setNewAdminPhone('');
+        setNewAdminEmail('');
+        fetchAdmins();
       } else {
-        const errData = await res.json().catch(() => ({}));
-        addToast(errData.detail || 'Failed to add mandal member', 'error');
+        alert(data.detail || 'Failed to generate Admin invite');
       }
-    } catch (error) {
-      addToast('Error adding member to roster', 'error');
-    } finally {
-      setAddingMember(false);
+    } catch (err) {
+      alert('Network error creating Admin invite');
     }
   };
 
-  // 8. API Handler: Remove Mandal Member
-  const handleDeleteMember = async (id: number) => {
+  // 5. Super Admin: Toggle Active/Deactivate or Reset Password or Delete
+  const handleToggleAdminStatus = async (admin: AdminUser) => {
     try {
-      const res = await fetch(`${API_BASE}/api/members/${id}`, {
+      const res = await fetch(`http://localhost:8000/api/admins/${admin.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: !admin.is_active })
+      });
+      if (res.ok) fetchAdmins();
+    } catch (err) {
+      alert('Failed to toggle admin status');
+    }
+  };
+
+  const handleResetAdminPassword = async (admin: AdminUser) => {
+    if (!confirm(`Send password reset invite link to '${admin.username || admin.full_name}' via WhatsApp?`)) return;
+    try {
+      const res = await fetch(`http://localhost:8000/api/admins/${admin.id}/reset-password`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCreatedInviteResult({ invite_link: data.invite_link });
+      }
+    } catch (err) {
+      alert('Failed to reset password');
+    }
+  };
+
+  const handleDeleteAdmin = async (admin: AdminUser) => {
+    if (!confirm(`Soft delete admin account '${admin.username || admin.full_name}'?`)) return;
+    try {
+      const res = await fetch(`http://localhost:8000/api/admins/${admin.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-
-      if (res.ok) {
-        addToast('Mandal member removed from roster', 'success');
-        setRefreshTrigger(prev => prev + 1);
-      } else {
-        addToast('Failed to remove member from roster', 'error');
-      }
-    } catch (error) {
-      addToast('Error removing member from roster', 'error');
-    } finally {
-      setDeleteConfirmation(null);
+      if (res.ok) fetchAdmins();
+    } catch (err) {
+      alert('Failed to delete admin');
     }
   };
 
-  // Initial loading state presentation
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#140C08] contact-mandala-bg flex flex-col items-center justify-center p-4 text-[#F8F4EC]">
-        <div className="relative flex items-center justify-center mb-4">
-          <div className="w-16 h-16 border-4 border-[#D4A017]/20 border-t-[#D4A017] rounded-full animate-spin"></div>
-          <span className="absolute text-xl">🙏</span>
-        </div>
-        <h2 className="text-2xl font-serif font-bold shimmer-gold animate-pulse">
-          Jai Shree Shyam
-        </h2>
-        <p className="text-sm text-stone-300/80 mt-1 font-light">Verifying administrative credentials & loading dashboard...</p>
-      </div>
-    );
-  }
+  // 6. Save Dynamic Settings
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mandalSettings) return;
+
+    try {
+      const res = await fetch('http://localhost:8000/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          mandal_name: mandalSettings.mandal_name,
+          whatsapp_contact: mandalSettings.whatsapp_contact,
+          admin_notification_numbers: mandalSettings.admin_notification_numbers,
+          booking_auto_reply_template: mandalSettings.booking_auto_reply_template,
+          website_contact_numbers: mandalSettings.website_contact_numbers
+        })
+      });
+      if (res.ok) {
+        setSettingsMsg('Mandal configuration & templates saved successfully!');
+        setTimeout(() => setSettingsMsg(''), 4000);
+      }
+    } catch (err) {
+      alert('Failed to save settings');
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch('http://localhost:8000/api/auth/logout', { method: 'POST', credentials: 'include' });
+    window.location.href = '/login';
+  };
+
+  // Filtering Logic
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = filterStatus === 'All' || b.status === filterStatus;
+    const matchesSearch = b.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          b.phone.includes(searchTerm) ||
+                          b.address.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const filteredAuditLogs = auditLogs.filter(log =>
+    log.user_username.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    log.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    log.details.toLowerCase().includes(auditSearch.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-[#140C08] contact-mandala-bg text-[#F8F4EC] font-sans pb-16 relative overflow-hidden">
+    <main className="min-h-screen bg-[#140C08] text-[#F8F4EC] pb-16 font-sans">
       
-      {/* Toast Notification Container */}
-      <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium flex items-center justify-between transition-all duration-300 backdrop-blur-md ${
-              toast.type === 'success'
-                ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/50'
-                : toast.type === 'error'
-                ? 'bg-red-950/90 text-red-200 border-red-500/50'
-                : 'bg-[#1C120C]/90 text-amber-200 border-[#D4A017]/40'
-            }`}
-          >
-            <span>{toast.message}</span>
+      {/* ── HEADER BANNER ──────────────────────────────────────────────────────── */}
+      <header className="bg-gradient-to-b from-[#1C120C] via-[#2A1A10] to-[#140C08] border-b border-[#D4A017]/30 pt-8 pb-10 px-4 sm:px-8 relative shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl border-2 border-[#D4A017]/60 overflow-hidden bg-[#140C08] relative shadow-lg">
+              <Image
+                src="/gallery/krishnaji.png"
+                alt="Krishna Artwork"
+                fill
+                className="object-cover object-top"
+              />
+            </div>
+            <div>
+              <span className="inline-block px-3 py-0.5 rounded-full bg-[#D4A017]/15 border border-[#D4A017]/30 text-[#D4A017] text-[10px] uppercase tracking-widest font-semibold mb-1">
+                ✨ Admin Management Portal ✨
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#F8F4EC]">
+                <span className="shimmer-gold">{mandalSettings?.mandal_name || 'Shyam Bhajan Seva Mandal'}</span>
+              </h1>
+              <p className="text-xs text-stone-300/80">
+                Logged in as <strong className="text-[#D4A017]">{currentUser?.full_name}</strong> (@{currentUser?.username || 'admin'})
+              </p>
+            </div>
+          </div>
+
+          {/* Role Pill & Actions */}
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1.5 rounded-xl bg-[#1C120C] border border-[#D4A017]/40 text-xs font-semibold text-[#D4A017] uppercase tracking-wider shadow">
+              {currentUser?.role === 'super_admin' ? '👑 Super Admin' : '👤 Admin'}
+            </span>
+
             <button
-              onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-              className="ml-3 text-xs opacity-70 hover:opacity-100 cursor-pointer"
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-semibold hover:bg-red-900/80 transition-all cursor-pointer shadow"
             >
-              ✕
+              Logout 🚪
             </button>
           </div>
-        ))}
-      </div>
 
-      {/* Hero Header & Devotional Banner */}
-      <header className="relative bg-gradient-to-r from-[#1C120C] via-[#2A1A10] to-[#140C08] text-[#F8F4EC] shadow-2xl border-b border-[#D4A017]/30">
-        
-        {/* Soft Ambient Orbs */}
-        <div className="absolute top-0 right-1/4 w-[500px] h-[300px] bg-[#D4A017]/10 blur-3xl rounded-full pointer-events-none" />
+        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            
-            {/* Left Section: Text Content & Title */}
-            <div className="space-y-4 text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#D4A017]/15 border border-[#D4A017]/35 text-[#D4A017] text-xs font-semibold tracking-widest uppercase backdrop-blur-md">
-                <span>✨</span>
-                <span>JAI SHREE SHYAM</span>
-                <span>✨</span>
-              </div>
-              
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#F8F4EC] tracking-tight leading-tight">
-                <span className="shimmer-gold">Shyam Bhajan Seva</span>
-                <span className="block text-2xl sm:text-3xl text-amber-200/90 font-sans font-light mt-1">
-                  Mandal & Event Admin Portal
-                </span>
-              </h1>
+        {/* ── TAB SWITCHER ────────────────────────────────────────────────────── */}
+        <div className="max-w-7xl mx-auto mt-8 flex flex-wrap gap-2 border-b border-[#D4A017]/20 pb-1">
+          <button
+            onClick={() => setActiveTab('bookings')}
+            className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
+              activeTab === 'bookings'
+                ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
+                : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            🚩 Event Requests ({bookings.length})
+          </button>
 
-              <p className="text-stone-300/90 text-sm sm:text-base max-w-xl leading-relaxed font-light">
-                Seamlessly manage bhajan event requests, roster schedules, mandal member duties, and host communications with full administrative control.
-              </p>
+          <button
+            onClick={() => setActiveTab('roster')}
+            className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
+              activeTab === 'roster'
+                ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
+                : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            🪕 Active Roster ({members.length})
+          </button>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={() => setRefreshTrigger(prev => prev + 1)}
-                  className="px-5 py-2.5 rounded-xl bg-[#D4A017] text-[#2A1A10] font-bold text-xs sm:text-sm shadow-xl hover:bg-[#C77A1A] hover:text-white transition-all duration-300 flex items-center gap-2 animate-pulse-gold cursor-pointer"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh Live Data
-                </button>
+          {currentUser?.role === 'super_admin' && (
+            <>
+              <button
+                onClick={() => setActiveTab('admins')}
+                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
+                  activeTab === 'admins'
+                    ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
+                    : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                👥 Admin Management
+              </button>
 
-                <button
-                  onClick={() => {
-                    fetch(`${API_BASE}/api/admin/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
-                    router.push('/login');
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-[#1C120C]/80 hover:bg-[#241710] border border-[#D4A017]/30 text-[#F8F4EC] text-xs sm:text-sm font-semibold hover:border-[#D4A017] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
-                >
-                  <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Exit Session
-                </button>
-              </div>
-            </div>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
+                  activeTab === 'settings'
+                    ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
+                    : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                ⚙️ Mandal Settings
+              </button>
 
-            {/* Right Section: Artwork & Frame Display */}
-            <div className="relative flex justify-center lg:justify-end">
-              <div className="relative group w-full max-w-sm sm:max-w-md h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl border-2 border-[#D4A017]/40 bg-[#140C08]">
-                
-                {/* Glow Radial Aura Effect */}
-                <div className="absolute inset-0 bg-radial from-[#D4A017]/20 via-amber-900/10 to-transparent pointer-events-none"></div>
-
-                {/* Kanhaji Artwork */}
-                <img
-                  src="/gallery/krishnaji.png"
-                  alt="Kanhaji Divine Artwork"
-                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-
-                {/* Edge Fading Mask Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#140C08]/90 via-transparent to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#140C08]/60 via-transparent to-transparent"></div>
-
-                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end text-[#F8F4EC]">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#D4A017]">Jay Shree Khatu Shyam Ji</p>
-                    <p className="text-sm font-serif italic text-stone-300">Haare Ka Sahara, Baba Shyam Hamara</p>
-                  </div>
-                  <span className="text-2xl animate-pulse">🌸</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
+              <button
+                onClick={() => setActiveTab('audit')}
+                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
+                  activeTab === 'audit'
+                    ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
+                    : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                📜 Security Audit Logs
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      {/* Main Dashboard Body Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 space-y-10 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-8">
 
-        {/* 1. TOP SECTION: 4-Column Stats Overview Header */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-          
-          {/* Card 1: Total Requests */}
-          <div className="glass-devotional-card p-5 rounded-2xl border border-[#D4A017]/25 shadow-xl flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-200/80">Total Requests</p>
-              <h3 className="text-3xl font-serif font-bold text-[#F8F4EC] mt-1">{stats.total}</h3>
-              <p className="text-xs text-stone-400 mt-1 font-light">All time bookings</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-[#D4A017]/15 text-[#D4A017] flex items-center justify-center text-xl font-bold border border-[#D4A017]/35 shadow-inner">
-              📋
-            </div>
-          </div>
-
-          {/* Card 2: Pending Approval */}
-          <div className="glass-devotional-card p-5 rounded-2xl border border-amber-500/35 shadow-xl flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-400">Pending Approval</p>
-              <h3 className="text-3xl font-serif font-bold text-amber-300 mt-1">{stats.pending}</h3>
-              <p className="text-xs text-amber-200/70 mt-1 font-light">Requires admin review</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-xl font-bold border border-amber-400/40 shadow-inner">
-              ⏳
-            </div>
-          </div>
-
-          {/* Card 3: Approved Events */}
-          <div className="glass-devotional-card p-5 rounded-2xl border border-emerald-500/35 shadow-xl flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Approved Events</p>
-              <h3 className="text-3xl font-serif font-bold text-emerald-300 mt-1">{stats.approved}</h3>
-              <p className="text-xs text-emerald-200/70 mt-1 font-light">Confirmed bhajan dates</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl font-bold border border-emerald-400/40 shadow-inner">
-              ✅
-            </div>
-          </div>
-
-          {/* Card 4: Active Mandal Members */}
-          <div className="glass-devotional-card p-5 rounded-2xl border border-indigo-500/35 shadow-xl flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-indigo-300">Active Members</p>
-              <h3 className="text-3xl font-serif font-bold text-indigo-200 mt-1">{stats.activeMembers}</h3>
-              <p className="text-xs text-indigo-200/70 mt-1 font-light">On-call performers</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xl font-bold border border-indigo-400/40 shadow-inner">
-              🎵
-            </div>
-          </div>
-
-        </section>
-
-        {/* 2. 2-COLUMN RESPONSIVE LAYOUT: 65% Left (Event Requests) / 35% Right (Active Roster) */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* LEFT COLUMN: 65% Width -> Incoming Event Requests Table */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+        {/* ── TAB 1: BOOKING REQUESTS MANAGEMENT ────────────────────────────── */}
+        {activeTab === 'bookings' && (
+          <div className="space-y-6">
             
-            <div className="glass-devotional-card rounded-3xl shadow-2xl border border-[#D4A017]/30 overflow-hidden">
-              
-              {/* Table Header & Controls Bar */}
-              <div className="p-6 border-b border-[#D4A017]/20 bg-[#140C08]/70 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl font-serif font-bold text-[#F8F4EC] flex items-center gap-2">
-                      <span>🚩</span> <span className="shimmer-gold">Incoming Event Requests</span>
-                    </h2>
-                    <p className="text-xs text-stone-300/80 mt-0.5 font-light">
-                      Review, approve, reschedule, or manage host booking requests.
-                    </p>
-                  </div>
+            <div className="glass-devotional-card p-4 rounded-2xl border border-[#D4A017]/25 flex flex-col md:flex-row justify-between items-center gap-4">
+              <input
+                type="text"
+                placeholder="Search by Host Name, Phone, or Address..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full md:w-96 px-4 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs focus:ring-2 focus:ring-[#D4A017] outline-none"
+              />
 
-                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#D4A017]/15 text-[#D4A017] border border-[#D4A017]/30 self-start sm:self-auto">
-                    Showing {filteredBookings.length} of {bookings.length}
-                  </span>
-                </div>
-
-                {/* Search Bar & Status Filter Tabs */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
-                  
-                  {/* Search Input */}
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="Search host name, phone, date, address..."
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner"
-                    />
-                    <svg className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    {searchTerm && (
-                      <button onClick={() => setSearchTerm('')} className="absolute right-3 top-3 text-xs text-stone-400 hover:text-[#F8F4EC]">
-                        ✕
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filter Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                    {['All', 'Pending', 'Approved', 'Rescheduled', 'Rejected'].map(status => (
-                      <button
-                        key={status}
-                        onClick={() => setStatusFilter(status)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                          statusFilter === status
-                            ? 'bg-[#D4A017] text-[#2A1A10] shadow-md'
-                            : 'bg-[#140C08] text-stone-300 border border-[#D4A017]/20 hover:border-[#D4A017]/50'
-                        }`}
-                      >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
-
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-stone-400">Filter Status:</span>
+                {['All', 'Pending', 'Approved', 'Rescheduled', 'Rejected'].map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setFilterStatus(st)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                      filterStatus === st
+                        ? 'bg-[#D4A017] text-[#140C08]'
+                        : 'bg-[#140C08] border border-[#D4A017]/25 text-stone-300 hover:border-[#D4A017]'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* Event Table Container */}
+            <div className="glass-devotional-card rounded-2xl border border-[#D4A017]/25 overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-[#140C08]/90 text-[#D4A017] font-bold border-b border-[#D4A017]/25 text-xs uppercase tracking-wider">
-                      <th className="py-4 px-4">Host Name</th>
-                      <th className="py-4 px-4">Date</th>
-                      <th className="py-4 px-4">Contact</th>
-                      <th className="py-4 px-4">Address / Location</th>
-                      <th className="py-4 px-4">Status</th>
-                      <th className="py-4 px-4 text-right">Actions</th>
+                <table className="w-full text-left text-xs text-stone-200">
+                  <thead className="bg-[#140C08] text-[#D4A017] uppercase tracking-wider font-semibold text-[11px] border-b border-[#D4A017]/20">
+                    <tr>
+                      <th className="p-4">ID</th>
+                      <th className="p-4">Host Name</th>
+                      <th className="p-4">Date</th>
+                      <th className="p-4">Contact</th>
+                      <th className="p-4">Address</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#D4A017]/15">
+                  <tbody className="divide-y divide-[#D4A017]/10">
                     {filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-stone-400">
-                          <div className="flex flex-col items-center justify-center space-y-2">
-                            <span className="text-3xl">📭</span>
-                            <p className="font-semibold text-[#F8F4EC]">No booking requests found</p>
-                            <p className="text-xs text-stone-400 font-light">
-                              {searchTerm || statusFilter !== 'All'
-                                ? 'Try adjusting your search terms or filter selection.'
-                                : 'New event requests submitted by devotees will appear here.'}
-                            </p>
-                          </div>
+                        <td colSpan={7} className="p-8 text-center text-stone-400 italic">
+                          No booking requests match the selected criteria.
                         </td>
                       </tr>
                     ) : (
                       filteredBookings.map(b => (
-                        <tr key={b.id} className="hover:bg-[#241710]/70 transition-colors">
-                          
-                          {/* Host Name */}
-                          <td className="py-4 px-4">
-                            <div className="font-bold text-[#F8F4EC]">{b.full_name}</div>
-                            {b.alt_phone && (
-                              <div className="text-[11px] text-stone-400">Alt: {b.alt_phone}</div>
-                            )}
+                        <tr key={b.id} className="hover:bg-[#241710]/40 transition-colors">
+                          <td className="p-4 font-mono font-bold text-[#D4A017]">#{b.id}</td>
+                          <td className="p-4 font-semibold text-[#F8F4EC]">{b.full_name}</td>
+                          <td className="p-4 font-medium text-amber-200/90">{b.booking_date}</td>
+                          <td className="p-4">
+                            <div>{b.phone}</div>
+                            {b.alt_phone && <div className="text-[10px] text-stone-400">Alt: {b.alt_phone}</div>}
                           </td>
-
-                          {/* Requested Date */}
-                          <td className="py-4 px-4 whitespace-nowrap">
-                            <span className="font-semibold text-amber-200 bg-[#140C08] border border-[#D4A017]/30 px-2.5 py-1 rounded-lg text-xs">
-                              {b.booking_date}
+                          <td className="p-4 max-w-xs truncate">{b.address}</td>
+                          <td className="p-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              b.status === 'Approved' ? 'bg-emerald-950 border border-emerald-500/50 text-emerald-300' :
+                              b.status === 'Pending' ? 'bg-amber-950 border border-amber-500/50 text-amber-300 animate-pulse' :
+                              b.status === 'Rescheduled' ? 'bg-blue-950 border border-blue-500/50 text-blue-300' :
+                              'bg-rose-950 border border-rose-500/50 text-rose-300'
+                            }`}>
+                              {b.status}
                             </span>
                           </td>
-
-                          {/* Phone Contact */}
-                          <td className="py-4 px-4 whitespace-nowrap text-stone-300">
-                            <a href={`tel:${b.phone}`} className="hover:text-[#D4A017] hover:underline flex items-center gap-1 font-mono text-xs">
-                              <span>📞</span> {b.phone}
-                            </a>
+                          <td className="p-4 text-right space-x-1">
+                            <button
+                              onClick={() => handleUpdateStatus(b.id, 'Approved')}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-800 transition-all cursor-pointer"
+                            >
+                              Approve ✓
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(b.id, 'Rescheduled')}
+                              className="px-2.5 py-1 rounded-lg bg-blue-900/60 border border-blue-500/40 text-blue-300 hover:bg-blue-800 transition-all cursor-pointer"
+                            >
+                              Reschedule 📅
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBooking(b.id)}
+                              className="px-2 py-1 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400 hover:bg-red-900 transition-all cursor-pointer"
+                            >
+                              Delete 🗑️
+                            </button>
                           </td>
-
-                          {/* Location/Address */}
-                          <td className="py-4 px-4 text-stone-300 max-w-xs truncate font-light" title={b.address}>
-                            {b.address}
-                          </td>
-
-                          {/* Status Badge */}
-                          <td className="py-4 px-4 whitespace-nowrap">
-                            {b.status === 'Pending' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-400/40 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-                                Pending
-                              </span>
-                            )}
-                            {b.status === 'Approved' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                Approved
-                              </span>
-                            )}
-                            {b.status === 'Rescheduled' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/40 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                                Rescheduled
-                              </span>
-                            )}
-                            {b.status === 'Rejected' && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-400/40 inline-flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-                                Rejected
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Action Buttons */}
-                          <td className="py-4 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1.5">
-                              
-                              {/* Pending Specific Actions */}
-                              {b.status === 'Pending' && (
-                                <>
-                                  <button
-                                    disabled={actionLoadingId === b.id}
-                                    onClick={() => handleStatusChange(b.id, 'Approved')}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow-md transition active:scale-95 disabled:opacity-50 cursor-pointer"
-                                  >
-                                    Approve
-                                  </button>
-
-                                  <button
-                                    onClick={() => {
-                                      setRescheduleBooking(b);
-                                      setNewRescheduleDate(b.booking_date);
-                                    }}
-                                    className="bg-[#140C08] border border-[#D4A017]/30 text-stone-200 hover:border-[#D4A017] hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
-                                  >
-                                    Reschedule
-                                  </button>
-
-                                  <button
-                                    onClick={() => setDeleteConfirmation({
-                                      type: 'booking',
-                                      id: b.id,
-                                      title: `Reject booking for ${b.full_name}?`
-                                    })}
-                                    className="bg-rose-950/60 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
-                                    title="Reject / Delete"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-
-                              {/* Approved Specific Actions */}
-                              {b.status === 'Approved' && (
-                                <>
-                                  <button
-                                    onClick={() => setSelectedBooking(b)}
-                                    className="bg-[#140C08] hover:bg-[#241710] text-amber-200 border border-[#D4A017]/30 text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer"
-                                  >
-                                    View Details
-                                  </button>
-
-                                  <button
-                                    onClick={() => setDeleteConfirmation({
-                                      type: 'booking',
-                                      id: b.id,
-                                      title: `Cancel & remove approved booking for ${b.full_name}?`
-                                    })}
-                                    className="bg-rose-950/60 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              )}
-
-                              {/* Rescheduled & Rejected Generic Actions */}
-                              {(b.status === 'Rescheduled' || b.status === 'Rejected') && (
-                                <>
-                                  <button
-                                    onClick={() => setSelectedBooking(b)}
-                                    className="bg-[#140C08] hover:bg-[#241710] text-amber-200 border border-[#D4A017]/30 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition cursor-pointer"
-                                  >
-                                    Details
-                                  </button>
-
-                                  <button
-                                    onClick={() => setDeleteConfirmation({
-                                      type: 'booking',
-                                      id: b.id,
-                                      title: `Delete record for ${b.full_name}?`
-                                    })}
-                                    className="text-stone-400 hover:text-rose-400 p-1.5 rounded hover:bg-rose-950/40 transition cursor-pointer"
-                                    title="Delete Record"
-                                  >
-                                    🗑️
-                                  </button>
-                                </>
-                              )}
-
-                            </div>
-                          </td>
-
                         </tr>
                       ))
                     )}
                   </tbody>
                 </table>
               </div>
-
             </div>
 
           </div>
+        )}
 
-          {/* RIGHT COLUMN: 35% Width -> Active Roster & Member Management */}
-          <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+        {/* ── TAB 2: ACTIVE MANDAL ROSTER ─────────────────────────────────────── */}
+        {activeTab === 'roster' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* Form: Add New Member */}
-            <div className="glass-devotional-card p-6 rounded-3xl shadow-2xl border border-[#D4A017]/30 space-y-4">
-              <div className="border-b border-[#D4A017]/20 pb-3">
-                <h2 className="text-lg font-serif font-bold text-[#F8F4EC] flex items-center gap-2">
-                  <span>👤</span> <span className="shimmer-gold">Add Mandal Member</span>
+            <div className="glass-devotional-card p-6 rounded-2xl border border-[#D4A017]/25 h-fit">
+              <h2 className="text-lg font-serif font-bold text-[#F8F4EC] mb-4">
+                <span className="shimmer-gold">Add Mandal Performer</span>
+              </h2>
+              <form onSubmit={handleAddMember} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-stone-300 mb-1 uppercase">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newMember.name}
+                    onChange={e => setNewMember({ ...newMember, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                    placeholder="e.g., Pandit Suresh Kumar"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-stone-300 mb-1 uppercase">WhatsApp Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newMember.phone}
+                    onChange={e => setNewMember({ ...newMember, phone: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                    placeholder="+919876543210"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-stone-300 mb-1 uppercase">Role *</label>
+                  <select
+                    value={newMember.role}
+                    onChange={e => setNewMember({ ...newMember, role: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  >
+                    <option value="Lead Bhajan Singer">Lead Bhajan Singer</option>
+                    <option value="Harmonium Master">Harmonium Master</option>
+                    <option value="Dholak / Tabla Artist">Dholak / Tabla Artist</option>
+                    <option value="Octapad & Chorus">Octapad & Chorus</option>
+                    <option value="Organizing Volunteer">Organizing Volunteer</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#D4A017] text-[#140C08] font-bold py-2.5 rounded-xl text-xs hover:bg-[#C77A1A] hover:text-white transition-all cursor-pointer"
+                >
+                  + Add Member to Roster
+                </button>
+              </form>
+            </div>
+
+            <div className="lg:col-span-2 space-y-4">
+              <h2 className="text-lg font-serif font-bold text-[#F8F4EC]">
+                Active Mandal Roster ({members.length})
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {members.map(m => (
+                  <div key={m.id} className="glass-devotional-card p-4 rounded-2xl border border-[#D4A017]/25 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-sm text-[#F8F4EC]">{m.name}</h3>
+                      <span className="inline-block text-[10px] text-[#D4A017] bg-[#D4A017]/10 px-2 py-0.5 rounded-full border border-[#D4A017]/20 my-1 font-mono">
+                        {m.role}
+                      </span>
+                      <p className="text-xs text-stone-400">{m.phone}</p>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteMember(m.id)}
+                      className="p-2 bg-red-950/60 border border-red-500/40 text-red-400 rounded-xl hover:bg-red-900 transition-all text-xs cursor-pointer"
+                      title="Remove Member"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── TAB 3: ADMIN MANAGEMENT WITH RELATIVE TIME & INVITE FLOW ─────────── */}
+        {activeTab === 'admins' && currentUser?.role === 'super_admin' && (
+          <div className="space-y-6">
+            
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-serif font-bold text-[#F8F4EC]">
+                  <span className="shimmer-gold">Admin Management System</span>
                 </h2>
-                <p className="text-xs text-stone-300/80 font-light">Register new performers, singers, or instrument artists.</p>
+                <p className="text-xs text-stone-400">
+                  Send WhatsApp Invite Links to new administrators, manage roles, and track relative last logins.
+                </p>
               </div>
 
-              <form onSubmit={handleAddMember} className="space-y-4">
-                
-                {/* Member Name */}
+              <button
+                onClick={() => setShowAddAdminModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-[#D4A017] text-[#140C08] text-xs font-bold hover:bg-[#C77A1A] hover:text-white transition-all shadow-lg cursor-pointer flex items-center gap-2"
+              >
+                <span>+</span> Send WhatsApp Invite Link 📲
+              </button>
+            </div>
+
+            {/* Admins Table */}
+            <div className="glass-devotional-card rounded-2xl border border-[#D4A017]/25 overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-stone-200">
+                  <thead className="bg-[#140C08] text-[#D4A017] uppercase tracking-wider font-semibold text-[11px] border-b border-[#D4A017]/20">
+                    <tr>
+                      <th className="p-4">Admin Name</th>
+                      <th className="p-4">Username</th>
+                      <th className="p-4">Role</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Last Login</th>
+                      <th className="p-4">Phone Number</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#D4A017]/10">
+                    {adminsList.map(adm => (
+                      <tr key={adm.id} className="hover:bg-[#241710]/40 transition-colors">
+                        <td className="p-4 font-semibold text-[#F8F4EC]">{adm.full_name}</td>
+                        <td className="p-4 font-mono text-[#D4A017]">
+                          {adm.username ? `@${adm.username}` : <span className="text-stone-500 italic">Pending Setup</span>}
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            adm.role === 'super_admin' ? 'bg-amber-950 border border-amber-500/50 text-amber-300' :
+                            'bg-stone-900 border border-stone-600 text-stone-300'
+                          }`}>
+                            {adm.role === 'super_admin' ? '👑 Super Admin' : '👤 Admin'}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            adm.is_active ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40' : 'bg-amber-950 text-amber-400 border border-amber-500/40'
+                          }`}>
+                            {adm.is_active ? 'Active' : 'Pending Invite'}
+                          </span>
+                        </td>
+                        {/* 🌟 Relative Time Ago Display */}
+                        <td className="p-4 font-medium text-stone-300">
+                          {formatTimeAgo(adm.last_login)}
+                        </td>
+                        <td className="p-4">{adm.phone_number}</td>
+                        <td className="p-4 text-right space-x-1">
+                          <button
+                            onClick={() => handleToggleAdminStatus(adm)}
+                            className="px-2 py-1 rounded bg-stone-800 border border-stone-600 hover:bg-stone-700 text-[11px] transition-all cursor-pointer"
+                          >
+                            {adm.is_active ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            onClick={() => handleResetAdminPassword(adm)}
+                            className="px-2 py-1 rounded bg-amber-950 border border-amber-600 text-amber-300 hover:bg-amber-900 text-[11px] transition-all cursor-pointer"
+                          >
+                            Resend Invite 📲
+                          </button>
+                          {adm.id !== currentUser.id && (
+                            <button
+                              onClick={() => handleDeleteAdmin(adm)}
+                              className="px-2 py-1 rounded bg-red-950 border border-red-600 text-red-400 hover:bg-red-900 text-[11px] transition-all cursor-pointer"
+                            >
+                              Soft Delete 🗑️
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── TAB 4: DYNAMIC MANDAL SETTINGS (SUPER ADMIN ONLY) ────────────────── */}
+        {activeTab === 'settings' && currentUser?.role === 'super_admin' && mandalSettings && (
+          <div className="space-y-6 max-w-4xl">
+            <div>
+              <h2 className="text-xl font-serif font-bold text-[#F8F4EC]">
+                <span className="shimmer-gold">⚙️ Dynamic Mandal Settings</span>
+              </h2>
+              <p className="text-xs text-stone-400">
+                Update Mandal contact numbers, notification dispatch lists, and WhatsApp templates without code modifications.
+              </p>
+            </div>
+
+            {settingsMsg && (
+              <div className="p-4 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 rounded-xl text-xs font-semibold">
+                ✅ {settingsMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSettings} className="glass-devotional-card p-6 sm:p-8 rounded-3xl border border-[#D4A017]/25 space-y-6">
+              
+              <div>
+                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                  Mandal Organization Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={mandalSettings.mandal_name}
+                  onChange={e => setMandalSettings({ ...mandalSettings, mandal_name: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-sm focus:ring-2 focus:ring-[#D4A017] outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">
-                    Full Name <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                    Primary WhatsApp Contact *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g., Rajesh Sharma"
-                    value={newMember.name}
-                    onChange={e => setNewMember({ ...newMember, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner"
+                    value={mandalSettings.whatsapp_contact}
+                    onChange={e => setMandalSettings({ ...mandalSettings, whatsapp_contact: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-sm focus:ring-2 focus:ring-[#D4A017] outline-none"
                   />
                 </div>
 
-                {/* Contact Phone */}
                 <div>
-                  <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">
-                    Contact Phone (10 Digits) <span className="text-rose-400">*</span>
+                  <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                    Website Contact Phone Numbers *
                   </label>
                   <input
-                    type="tel"
+                    type="text"
                     required
-                    maxLength={10}
-                    placeholder="e.g., 9876543210"
-                    value={newMember.phone}
-                    onChange={e => setNewMember({ ...newMember, phone: e.target.value.replace(/\D/g, '') })}
-                    className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner font-mono"
+                    value={mandalSettings.website_contact_numbers}
+                    onChange={e => setMandalSettings({ ...mandalSettings, website_contact_numbers: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-sm focus:ring-2 focus:ring-[#D4A017] outline-none"
                   />
                 </div>
-
-                {/* Role Dropdown */}
-                <div>
-                  <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">
-                    Mandal Duty / Role <span className="text-rose-400">*</span>
-                  </label>
-                  <select
-                    value={newMember.role}
-                    onChange={e => setNewMember({ ...newMember, role: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] transition shadow-inner cursor-pointer"
-                  >
-                    {MANDAL_ROLES.map(role => (
-                      <option key={role} value={role} className="bg-[#140C08] text-[#F8F4EC]">{role}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Custom Role Input if 'Other / Custom' selected */}
-                {newMember.role === 'Other / Custom' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase tracking-wider">Specify Role Title</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g., Keyboardist / Flutist"
-                      value={newMember.customRole}
-                      onChange={e => setNewMember({ ...newMember, customRole: e.target.value })}
-                      className="w-full px-3.5 py-2.5 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017] placeholder-stone-500 transition shadow-inner"
-                    />
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={addingMember}
-                  className="w-full bg-[#D4A017] text-[#2A1A10] hover:bg-[#C77A1A] hover:text-white font-bold py-3 px-4 rounded-xl text-sm shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 active:scale-98 cursor-pointer animate-pulse-gold"
-                >
-                  {addingMember ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-[#2A1A10]/30 border-t-[#2A1A10] rounded-full animate-spin"></div>
-                      <span>Saving Member...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>+</span>
-                      <span>Save Active Member</span>
-                    </>
-                  )}
-                </button>
-
-              </form>
-            </div>
-
-            {/* List: Active Mandal Roster */}
-            <div className="glass-devotional-card p-6 rounded-3xl shadow-2xl border border-[#D4A017]/30 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#D4A017]/20 pb-3">
-                <h2 className="text-lg font-serif font-bold text-[#F8F4EC] flex items-center gap-2">
-                  <span>🪕</span> <span className="shimmer-gold">Active Roster</span>
-                </h2>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#D4A017]/20 text-[#D4A017] border border-[#D4A017]/40">
-                  {members.length} Members
-                </span>
-              </div>
-
-              {members.length === 0 ? (
-                <div className="py-8 text-center text-stone-400">
-                  <p className="text-sm font-semibold">No active members registered</p>
-                  <p className="text-xs text-stone-400 mt-1 font-light">Use the form above to build your mandal team roster.</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                  {members.map(member => (
-                    <div
-                      key={member.id}
-                      className="p-3.5 bg-[#140C08]/80 rounded-2xl border border-[#D4A017]/20 hover:border-[#D4A017]/50 hover:bg-[#241710] transition-all flex items-center justify-between group shadow-sm"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-[#F8F4EC] text-sm">{member.name}</p>
-                          <span className="bg-[#D4A017]/20 text-[#D4A017] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D4A017]/35">
-                            {member.role}
-                          </span>
-                        </div>
-                        <p className="text-xs font-mono text-stone-300 flex items-center gap-1 font-light">
-                          <span>📞</span> {member.phone}
-                        </p>
-                      </div>
-
-                      {/* Remove Member Button */}
-                      <button
-                        onClick={() => setDeleteConfirmation({
-                          type: 'member',
-                          id: member.id,
-                          title: `Remove ${member.name} from active roster?`
-                        })}
-                        className="text-stone-400 hover:text-rose-400 hover:bg-rose-950/40 p-2 rounded-lg transition-colors cursor-pointer"
-                        title="Remove Member"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-          </div>
-
-        </section>
-      </main>
-
-      {/* ----------------- MODALS & POPOVERS ----------------- */}
-
-      {/* Modal 1: Booking Event Details View */}
-      {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="glass-devotional-card rounded-3xl max-w-lg w-full p-7 shadow-2xl border border-[#D4A017]/40 text-[#F8F4EC] space-y-5 relative">
-            <button
-              onClick={() => setSelectedBooking(null)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-[#F8F4EC] text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#241710] transition-colors cursor-pointer"
-            >
-              ✕
-            </button>
-
-            <div className="border-b border-[#D4A017]/20 pb-3">
-              <span className="text-xs font-bold text-[#D4A017] uppercase tracking-wider">Event Details</span>
-              <h3 className="text-xl font-serif font-bold text-[#F8F4EC] mt-0.5">{selectedBooking.full_name}</h3>
-            </div>
-
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-3 bg-[#140C08] p-3.5 rounded-xl border border-[#D4A017]/25">
-                <div>
-                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Requested Date</p>
-                  <p className="font-bold text-amber-200 mt-0.5">{selectedBooking.booking_date}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Current Status</p>
-                  <p className="font-bold text-[#F8F4EC] mt-0.5">{selectedBooking.status}</p>
-                </div>
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Primary Contact Phone</p>
-                <p className="font-mono text-stone-200 mt-0.5">{selectedBooking.phone}</p>
-              </div>
-
-              {selectedBooking.alt_phone && (
-                <div>
-                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Alternate Phone</p>
-                  <p className="font-mono text-stone-200 mt-0.5">{selectedBooking.alt_phone}</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Event Address / Location</p>
-                <p className="text-stone-200 mt-0.5 bg-[#140C08] p-3.5 rounded-xl border border-[#D4A017]/25 leading-relaxed whitespace-pre-wrap font-light">
-                  {selectedBooking.address}
+                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                  Admin Notification WhatsApp Numbers (Comma-Separated) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={mandalSettings.admin_notification_numbers}
+                  onChange={e => setMandalSettings({ ...mandalSettings, admin_notification_numbers: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#D4A017] rounded-xl text-sm font-mono focus:ring-2 focus:ring-[#D4A017] outline-none"
+                  placeholder="whatsapp:+919876543210, whatsapp:+919123456789"
+                />
+                <p className="text-[11px] text-stone-400 mt-1">
+                  Add 1, 2, or 3+ WhatsApp numbers separated by commas to receive new booking alerts.
                 </p>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#D4A017]/20">
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="px-4 py-2 bg-[#140C08] hover:bg-[#241710] text-[#F8F4EC] border border-[#D4A017]/30 font-semibold rounded-xl text-xs transition cursor-pointer"
-              >
-                Close Details
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 2: Reschedule Date Picker */}
-      {rescheduleBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="glass-devotional-card rounded-3xl max-w-md w-full p-7 shadow-2xl border border-[#D4A017]/40 text-[#F8F4EC] space-y-5 relative">
-            <button
-              onClick={() => setRescheduleBooking(null)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-[#F8F4EC] font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#241710] transition-colors cursor-pointer"
-            >
-              ✕
-            </button>
-
-            <div>
-              <h3 className="text-xl font-serif font-bold text-[#D4A017]">Reschedule Event</h3>
-              <p className="text-xs text-stone-300/80 font-light mt-1">Select a new date for {rescheduleBooking.full_name}'s bhajan seva.</p>
-            </div>
-
-            <form onSubmit={handleRescheduleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">New Event Date</label>
-                <input
-                  type="date"
+                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                  Booking Auto-Reply WhatsApp Message Template *
+                </label>
+                <textarea
+                  rows={4}
                   required
-                  value={newRescheduleDate}
-                  onChange={e => setNewRescheduleDate(e.target.value)}
-                  className="w-full p-3 border border-[#D4A017]/30 rounded-xl text-sm bg-[#140C08] text-[#F8F4EC] focus:outline-none focus:ring-2 focus:ring-[#D4A017]"
+                  value={mandalSettings.booking_auto_reply_template}
+                  onChange={e => setMandalSettings({ ...mandalSettings, booking_auto_reply_template: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs focus:ring-2 focus:ring-[#D4A017] outline-none leading-relaxed"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#D4A017] text-[#140C08] font-bold text-xs hover:bg-[#C77A1A] hover:text-white transition-all cursor-pointer shadow-xl"
+              >
+                Save Configuration & Templates 💾
+              </button>
+            </form>
+
+          </div>
+        )}
+
+        {/* ── TAB 5: SECURITY AUDIT LOGS (SUPER ADMIN ONLY) ───────────────────── */}
+        {activeTab === 'audit' && currentUser?.role === 'super_admin' && (
+          <div className="space-y-6">
+            
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-serif font-bold text-[#F8F4EC]">
+                  <span className="shimmer-gold">Security Audit Trail</span>
+                </h2>
+                <p className="text-xs text-stone-400">
+                  Immutable record of system authentications, admin invitations, password changes, and booking actions.
+                </p>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Filter logs by username or action..."
+                value={auditSearch}
+                onChange={e => setAuditSearch(e.target.value)}
+                className="w-full md:w-80 px-4 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none"
+              />
+            </div>
+
+            <div className="glass-devotional-card rounded-2xl border border-[#D4A017]/25 overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-stone-200">
+                  <thead className="bg-[#140C08] text-[#D4A017] uppercase tracking-wider font-semibold text-[11px] border-b border-[#D4A017]/20">
+                    <tr>
+                      <th className="p-4">Timestamp</th>
+                      <th className="p-4">User</th>
+                      <th className="p-4">Action Event</th>
+                      <th className="p-4">Details</th>
+                      <th className="p-4">IP Address</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#D4A017]/10 font-mono text-[11px]">
+                    {filteredAuditLogs.map(log => (
+                      <tr key={log.id} className="hover:bg-[#241710]/40 transition-colors">
+                        <td className="p-4 text-amber-200/90">{formatTimeAgo(log.timestamp)}</td>
+                        <td className="p-4 text-[#D4A017] font-bold">@{log.user_username}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            log.action.includes('SUCCESS') || log.action.includes('ACCEPTED') ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' :
+                            log.action.includes('FAILED') || log.action.includes('LOCKED') ? 'bg-red-950 text-red-300 border border-red-500/40' :
+                            'bg-blue-950 text-blue-300 border border-blue-500/40'
+                          }`}>
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="p-4 font-sans text-stone-300">{log.details}</td>
+                        <td className="p-4 text-stone-400">{log.ip_address}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </div>
+
+      {/* ── MODAL 1: ISSUE ADMIN WHATSAPP INVITE ─────────────────────────────── */}
+      {showAddAdminModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-devotional-card p-6 sm:p-8 rounded-3xl border border-[#D4A017]/40 max-w-md w-full relative shadow-2xl">
+            <h3 className="text-xl font-serif font-bold text-[#F8F4EC] mb-2">
+              <span className="shimmer-gold">📲 Issue WhatsApp Admin Invite</span>
+            </h3>
+            <p className="text-xs text-stone-300/80 mb-6">
+              Generates a secure 24-hour invitation link dispatched via Twilio WhatsApp so the new Admin can set their username & password.
+            </p>
+
+            <form onSubmit={handleInviteAdmin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newAdminName}
+                  onChange={e => setNewAdminName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  placeholder="e.g., Nilesh Sharma"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">WhatsApp Phone *</label>
+                <input
+                  type="text"
+                  required
+                  value={newAdminPhone}
+                  onChange={e => setNewAdminPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  placeholder="whatsapp:+919876543210"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">Email Address (Optional)</label>
+                <input
+                  type="email"
+                  value={newAdminEmail}
+                  onChange={e => setNewAdminEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  placeholder="nilesh@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">Role *</label>
+                <select
+                  value={newAdminRole}
+                  onChange={e => setNewAdminRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                >
+                  <option value="admin">Admin (Bookings & Roster Control)</option>
+                  <option value="super_admin">Super Admin (Full RBAC System Control)</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setRescheduleBooking(null)}
-                  className="px-4 py-2.5 bg-[#140C08] hover:bg-[#241710] text-[#F8F4EC] border border-[#D4A017]/30 font-semibold rounded-xl text-xs transition cursor-pointer"
+                  onClick={() => setShowAddAdminModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-stone-600 text-stone-300 text-xs font-semibold hover:bg-stone-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-[#D4A017] text-[#2A1A10] hover:bg-[#C77A1A] hover:text-white font-bold rounded-xl text-xs transition shadow-lg cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-[#D4A017] text-[#140C08] text-xs font-bold hover:bg-[#C77A1A] hover:text-white cursor-pointer shadow-lg"
                 >
-                  Confirm Reschedule
+                  Generate & Send Invite 📲
                 </button>
               </div>
             </form>
@@ -1005,43 +1030,45 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal 3: Confirmation Popover / Dialog for Delete Actions */}
-      {deleteConfirmation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="glass-devotional-card rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#D4A017]/40 text-[#F8F4EC] space-y-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-300 flex items-center justify-center text-2xl font-bold mx-auto shadow-md">
-              ⚠️
+      {/* ── MODAL 2: GENERATED INVITE LINK DISPLAY ──────────────────────────── */}
+      {createdInviteResult && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-devotional-card p-6 sm:p-8 rounded-3xl border border-emerald-500/50 max-w-md w-full relative shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-950 border border-emerald-500 flex items-center justify-center mx-auto mb-3">
+              <span className="text-2xl">📲</span>
             </div>
 
-            <div>
-              <h3 className="text-base font-bold text-[#F8F4EC]">{deleteConfirmation.title}</h3>
-              <p className="text-xs text-stone-400 mt-1 font-light">This action cannot be undone.</p>
+            <h3 className="text-xl font-serif font-bold text-[#F8F4EC] mb-2">
+              WhatsApp Invite Link Generated
+            </h3>
+            <p className="text-xs text-stone-300 mb-6">
+              The invitation link has been queued for WhatsApp delivery. You can also copy it manually:
+            </p>
+
+            <div className="bg-[#140C08] border border-[#D4A017]/30 p-3 rounded-2xl text-left font-mono text-[11px] text-[#D4A017] break-all mb-4">
+              {createdInviteResult.invite_link}
             </div>
 
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                onClick={() => setDeleteConfirmation(null)}
-                className="px-4 py-2.5 bg-[#140C08] hover:bg-[#241710] text-[#F8F4EC] border border-[#D4A017]/30 font-semibold rounded-xl text-xs transition flex-1 cursor-pointer"
-              >
-                Keep Record
-              </button>
-              <button
-                onClick={() => {
-                  if (deleteConfirmation.type === 'booking') {
-                    handleDeleteBooking(deleteConfirmation.id);
-                  } else {
-                    handleDeleteMember(deleteConfirmation.id);
-                  }
-                }}
-                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition shadow-lg flex-1 cursor-pointer"
-              >
-                Yes, Delete
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(createdInviteResult.invite_link);
+                alert('Invite link copied to clipboard!');
+              }}
+              className="w-full py-2.5 mb-2 rounded-xl bg-[#1C120C] border border-[#D4A017]/40 text-[#D4A017] font-semibold text-xs hover:bg-[#2A1A10] cursor-pointer"
+            >
+              📋 Copy Invite Link to Clipboard
+            </button>
+
+            <button
+              onClick={() => setCreatedInviteResult(null)}
+              className="w-full py-3 rounded-xl bg-[#D4A017] text-[#140C08] font-bold text-xs hover:bg-[#C77A1A] hover:text-white cursor-pointer"
+            >
+              Close Window
+            </button>
           </div>
         </div>
       )}
 
-    </div>
+    </main>
   );
 }
