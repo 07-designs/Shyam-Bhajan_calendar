@@ -223,7 +223,7 @@ export default function Home() {
           >
             <span className="text-2xl group-hover:animate-bounce inline-block">🙏</span>
             <span className={`transition-all duration-300 ${scrolled ? 'shimmer-gold' : 'text-white'}`}>
-              Nishan Yatra Mandal
+              Shree Nishan Yatra Parivar
             </span>
           </button>
 
