@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/auth/me', { credentials: 'include' });
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data);
@@ -143,7 +144,7 @@ export default function AdminDashboard() {
 
   const fetchBookings = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/bookings', { credentials: 'include' });
+      const res = await fetch('/api/bookings', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setBookings(data);
@@ -157,7 +158,7 @@ export default function AdminDashboard() {
 
   const fetchMembers = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/members', { credentials: 'include' });
+      const res = await fetch('/api/members', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setMembers(data);
@@ -169,7 +170,7 @@ export default function AdminDashboard() {
 
   const fetchAdmins = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/admins', { credentials: 'include' });
+      const res = await fetch('/api/admins', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setAdminsList(data);
@@ -181,7 +182,7 @@ export default function AdminDashboard() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/settings');
+      const res = await fetch('/api/settings');
       if (res.ok) {
         const data = await res.json();
         setMandalSettings(data);
@@ -193,7 +194,7 @@ export default function AdminDashboard() {
 
   const fetchAuditLogs = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/audit', { credentials: 'include' });
+      const res = await fetch('/api/audit', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setAuditLogs(data);
@@ -206,7 +207,7 @@ export default function AdminDashboard() {
   // 2. Booking Status Updates
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/bookings/${id}/status?status_str=${newStatus}`, {
+      const res = await fetch(`/api/bookings/${id}/status?status_str=${newStatus}`, {
         method: 'PATCH',
         credentials: 'include'
       });
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
   const handleDeleteBooking = async (id: number) => {
     if (!confirm('Are you sure you want to delete this booking request?')) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/bookings/${id}`, {
+      const res = await fetch(`/api/bookings/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -237,7 +238,7 @@ export default function AdminDashboard() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:8000/api/members', {
+      const res = await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -255,7 +256,7 @@ export default function AdminDashboard() {
   const handleDeleteMember = async (id: number) => {
     if (!confirm('Remove member from active mandal roster?')) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/members/${id}`, {
+      const res = await fetch(`/api/members/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -271,7 +272,7 @@ export default function AdminDashboard() {
   const handleInviteAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:8000/api/admins/invite', {
+      const res = await fetch('/api/admins/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -302,7 +303,7 @@ export default function AdminDashboard() {
   // 5. Super Admin: Toggle Active/Deactivate or Reset Password or Delete
   const handleToggleAdminStatus = async (admin: AdminUser) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/admins/${admin.id}`, {
+      const res = await fetch(`/api/admins/${admin.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -317,7 +318,7 @@ export default function AdminDashboard() {
   const handleResetAdminPassword = async (admin: AdminUser) => {
     if (!confirm(`Send password reset invite link to '${admin.username || admin.full_name}' via WhatsApp?`)) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/admins/${admin.id}/reset-password`, {
+      const res = await fetch(`/api/admins/${admin.id}/reset-password`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -333,7 +334,7 @@ export default function AdminDashboard() {
   const handleDeleteAdmin = async (admin: AdminUser) => {
     if (!confirm(`Soft delete admin account '${admin.username || admin.full_name}'?`)) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/admins/${admin.id}`, {
+      const res = await fetch(`/api/admins/${admin.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -349,7 +350,7 @@ export default function AdminDashboard() {
     if (!mandalSettings) return;
 
     try {
-      const res = await fetch('http://localhost:8000/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -371,7 +372,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = async () => {
-    await fetch('http://localhost:8000/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     window.location.href = '/login';
   };
 

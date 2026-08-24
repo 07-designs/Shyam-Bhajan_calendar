@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config';
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -43,7 +44,7 @@ function AcceptInviteContent() {
 
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/admins/accept-invite', {
+      const res = await fetch('/api/admins/accept-invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
