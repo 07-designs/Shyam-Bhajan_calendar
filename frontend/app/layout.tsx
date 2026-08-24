@@ -2,8 +2,13 @@ import './globals.css'
 import React from 'react'
 
 export const metadata = {
-  title: 'Shyam Bhajan Seva Platform',
+  title: 'Shree Nishan Yatra Parivar | Shyam Bhajan Seva',
   description: 'Book a divine Bhajan Sandhya easily at home.',
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -239,3 +239,15 @@
   box-shadow: 0 20px 45px rgba(212, 160, 23, 0.15);
   transform: translateY(-4px);
 }
+
+/* White Calendar Icon for Date Input Fields */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
