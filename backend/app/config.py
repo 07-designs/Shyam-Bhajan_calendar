@@ -40,11 +40,17 @@ class Settings(BaseSettings):
     def formatted_database_url(self) -> str:
         """
         Fix for PostgreSQL connection strings on platforms like Render/Heroku.
-        Replaces postgres:// with postgresql:// if needed.
+        Replaces postgres:// with postgresql:// if needed, and ensures sslmode=require
+        is present for PostgreSQL connections.
         """
         url = self.DATABASE_URL
         if url and url.startswith("postgres://"):
-            return url.replace("postgres://", "postgresql://", 1)
+            url = url.replace("postgres://", "postgresql://", 1)
+
+        if url and "postgresql" in url and "sslmode=" not in url:
+            separator = "&" if "?" in url else "?"
+            url = f"{url}{separator}sslmode=require"
+
         return url
 
     @property
