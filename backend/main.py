@@ -14,19 +14,20 @@ from app.api.audit import router as audit_router
 from app.api.settings import router as settings_router
 
 # Automatically create schema tables in database if missing
-Base.metadata.create_all(bind=engine)
-
-# Seed initial Super Admin and Settings on app startup
-db: Session = SessionLocal()
 try:
-    AdminService.ensure_initial_super_admin(
-        db=db,
-        default_username=settings.ADMIN_USERNAME,
-        default_hash=settings.ADMIN_PASSWORD_HASH
-    )
-    SettingsService.get_settings(db)
-finally:
-    db.close()
+    Base.metadata.create_all(bind=engine)
+    db: Session = SessionLocal()
+    try:
+        AdminService.ensure_initial_super_admin(
+            db=db,
+            default_username=settings.ADMIN_USERNAME,
+            default_hash=settings.ADMIN_PASSWORD_HASH
+        )
+        SettingsService.get_settings(db)
+    finally:
+        db.close()
+except Exception as e:
+    print(f"⚠️ Startup DB Init Warning: {e}")
 
 # Create FastAPI Application Instance
 app = FastAPI(
@@ -38,7 +39,12 @@ app = FastAPI(
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://shreenishanyatraparivar.vercel.app",
+        "https://shyam-bhajan-calendar.vercel.app"
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

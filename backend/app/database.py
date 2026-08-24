@@ -13,7 +13,7 @@ if "sqlite" in db_url:
 else:
     engine = create_engine(
         db_url,
-        connect_args={"sslmode": "require"},
+        connect_args={"sslmode": "prefer"},
         pool_pre_ping=True,
         pool_recycle=300
     )

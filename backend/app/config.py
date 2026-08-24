@@ -55,7 +55,7 @@ class Settings(BaseSettings):
 
         if url and "postgresql" in url and "sslmode=" not in url:
             separator = "&" if "?" in url else "?"
-            url = f"{url}{separator}sslmode=require"
+            url = f"{url}{separator}sslmode=prefer"
 
         return url
 
