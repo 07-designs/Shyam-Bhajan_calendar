@@ -1,5 +1,6 @@
-import { API_BASE_URL } from './config';
 'use client';
+
+import { API_BASE_URL } from './config';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
