@@ -40,18 +40,11 @@ class Settings(BaseSettings):
     def formatted_database_url(self) -> str:
         """
         Fix for PostgreSQL connection strings on platforms like Render/Heroku.
-        Replaces postgres:// with postgresql:// if needed, and automatically converts
-        external Render database URL to internal host for zero-latency private cloud networking.
+        Replaces postgres:// with postgresql:// if needed, and ensures sslmode=prefer is set.
         """
         url = self.DATABASE_URL
         if url and url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
-
-        # Convert Render external DB domain to Render internal private network host
-        if url and ".singapore-postgres.render.com" in url:
-            url = url.replace(".singapore-postgres.render.com", "")
-        elif url and ".render.com" in url:
-            url = re.sub(r"\.[a-z0-9\-]+\.render\.com", "", url)
 
         if url and "postgresql" in url and "sslmode=" not in url:
             separator = "&" if "?" in url else "?"
