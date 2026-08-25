@@ -14,10 +14,9 @@ router = APIRouter(prefix="/api/bookings", tags=["Bookings"])
 
 @router.get("", response_model=List[BookingResponse])
 def get_bookings(
-    current_admin: AdminModel = Depends(require_role(["super_admin", "admin", "volunteer"])),
     db: Session = Depends(get_db)
 ):
-    """Fetch all recorded event bookings (Protected: Admin, Super Admin, Volunteer)."""
+    """Fetch recorded event bookings (Public access for datepicker validation & admin panel)."""
     return db.query(BookingModel).all()
 
 

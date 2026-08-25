@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 # ── ADMIN SCHEMAS ─────────────────────────────────────────────────────────────
@@ -143,6 +143,25 @@ class BookingCreate(BaseModel):
     phone: str
     alt_phone: Optional[str] = None
     booking_date: date
+
+    @field_validator("booking_date", mode="before")
+    @classmethod
+    def parse_booking_date(cls, v):
+        if isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            v_str = v.strip()
+            # Try ISO YYYY-MM-DD
+            try:
+                return datetime.strptime(v_str, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+            # Try DD/MM/YYYY
+            try:
+                return datetime.strptime(v_str, "%d/%m/%Y").date()
+            except ValueError:
+                pass
+        return v
 
 
 class BookingResponse(BookingCreate):
