@@ -156,7 +156,7 @@ export default function Home() {
 
   async function fetchBookedDates(): Promise<void> {
     try {
-      const res = await fetch('/api/bookings');
+      const res = await fetch(`${API_BASE_URL}/api/bookings`);
       if (!res.ok) return;
       const data: BookingResponse[] = await res.json();
       setBookedDates(data.map((b) => b.booking_date));
@@ -189,7 +189,7 @@ export default function Home() {
         alt_phone: null,
         booking_date: formData.booking_date,
       };
-      const res = await fetch('/api/bookings', {
+      const res = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

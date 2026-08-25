@@ -45,7 +45,7 @@ function AcceptInviteContent() {
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admins/accept-invite', {
+      const res = await fetch(`${API_BASE_URL}/api/admins/accept-invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
