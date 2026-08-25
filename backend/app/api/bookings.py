@@ -17,7 +17,11 @@ def get_bookings(
     db: Session = Depends(get_db)
 ):
     """Fetch recorded event bookings (Public access for datepicker validation & admin panel)."""
-    return db.query(BookingModel).all()
+    try:
+        return db.query(BookingModel).all()
+    except Exception as e:
+        print(f"⚠️ Error fetching bookings: {e}")
+        return []
 
 
 @router.post("", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
@@ -30,38 +34,50 @@ def create_booking(
     Public endpoint: Create a new Bhajan Sandhya booking request.
     Validates request date uniqueness, saves booking to DB, and queues WhatsApp alert in BackgroundTasks.
     """
-    # 1. Validate date availability
-    existing = db.query(BookingModel).filter(BookingModel.booking_date == booking.booking_date).first()
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="This date is already allocated or pending confirmation."
+    try:
+        # 1. Validate date availability
+        existing = db.query(BookingModel).filter(BookingModel.booking_date == booking.booking_date).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="This date is already allocated or pending confirmation."
+            )
+
+        # 2. Save booking to database
+        db_booking = BookingModel(
+            full_name=booking.full_name,
+            address=booking.address,
+            phone=booking.phone,
+            alt_phone=booking.alt_phone,
+            booking_date=booking.booking_date
         )
+        db.add(db_booking)
+        db.commit()
+        db.refresh(db_booking)
 
-    # 2. Save booking to database
-    db_booking = BookingModel(
-        full_name=booking.full_name,
-        address=booking.address,
-        phone=booking.phone,
-        alt_phone=booking.alt_phone,
-        booking_date=booking.booking_date
-    )
-    db.add(db_booking)
-    db.commit()
-    db.refresh(db_booking)
+        # 3. Queue non-blocking WhatsApp alert via BackgroundTasks
+        try:
+            booking_payload = {
+                "full_name": db_booking.full_name,
+                "phone": db_booking.phone,
+                "address": db_booking.address,
+                "booking_date": str(db_booking.booking_date),
+                "notes": getattr(booking, "notes", "None") or "None"
+            }
+            background_tasks.add_task(send_booking_notification_task, booking_payload)
+        except Exception as ws_err:
+            print(f"⚠️ WhatsApp background task dispatch notice: {ws_err}")
 
-    # 3. Queue non-blocking WhatsApp alert via BackgroundTasks
-    booking_payload = {
-        "full_name": db_booking.full_name,
-        "phone": db_booking.phone,
-        "address": db_booking.address,
-        "booking_date": str(db_booking.booking_date),
-        "notes": getattr(booking, "notes", "None") or "None"
-    }
-
-    background_tasks.add_task(send_booking_notification_task, booking_payload)
-
-    return db_booking
+        return db_booking
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"⚠️ Error creating booking: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save booking request: {str(e)}"
+        )
 
 
 @router.patch("/{booking_id}/status")
