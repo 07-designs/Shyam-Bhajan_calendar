@@ -51,9 +51,16 @@ def create_booking(
             alt_phone=booking.alt_phone,
             booking_date=booking.booking_date
         )
-        db.add(db_booking)
-        db.commit()
-        db.refresh(db_booking)
+        try:
+            db.add(db_booking)
+            db.commit()
+            db.refresh(db_booking)
+        except Exception as db_err:
+            db.rollback()
+            print(f"⚠️ Primary DB save notice ({db_err}). Retrying commit...")
+            db.add(db_booking)
+            db.commit()
+            db.refresh(db_booking)
 
         # 3. Queue non-blocking WhatsApp alert via BackgroundTasks
         try:
