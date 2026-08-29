@@ -412,7 +412,7 @@ export default function Home() {
             {/* Section heading */}
             <div className="text-center mb-16 reveal relative">
               <div className="w-48 h-48 mx-auto -mb-32 opacity-20 rounded-full mandala-heading-bg pointer-events-none" />
-              <span className="text-[#D4A017] text-xs uppercase tracking-widest font-semibold block mb-2">🪶 Sacred Seva & Music</span>
+              <span className="text-[#D4A017] text-xs uppercase tracking-widest font-semibold block mb-2"> Sacred Seva & Music</span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-[#F8F4EC]">
                 About Our Mandal
               </h2>
@@ -579,7 +579,7 @@ export default function Home() {
 
             {/* Section heading */}
             <div className="text-center mb-16 reveal">
-              <span className="text-[#D4A017] text-xs uppercase tracking-widest font-semibold block mb-2">🪔 Divine Invitation</span>
+              <span className="text-[#D4A017] text-xs uppercase tracking-widest font-semibold block mb-2"> Divine Invitation</span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-[#F8F4EC]">Book Your Date</h2>
               <div className="w-24 h-1 bg-[#D4A017] mx-auto mt-3 rounded-full" />
               <p className="text-stone-300/90 max-w-2xl mx-auto mt-4 text-base sm:text-lg font-light leading-relaxed">
@@ -741,7 +741,7 @@ export default function Home() {
 
             {/* Section heading */}
             <div className="text-center mb-16 reveal">
-              <span className="text-[#D4A017] text-xs uppercase tracking-widest font-semibold block mb-2">🙏 Connect With Us</span>
+              {/* <span className="text-[#D4A017] text-xs uppercase tracking-widest font-semibold block mb-2">🙏 Connect With Us</span> */}
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-[#F8F4EC]">
                 Contact Us
               </h2>
