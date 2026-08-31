@@ -153,13 +153,19 @@ class WhatsAppService:
                 f"⏰ *Booking Timestamp:* {timestamp}"
             )
 
-            recipients = settings.admin_whatsapp_numbers
-            if not recipients:
-                logger.warning("ADMIN_WHATSAPP_NUMBER not configured. Message fallback:\n" + formatted_body)
+            recipients = list(settings.admin_whatsapp_numbers)
+            if phone and phone != "N/A":
+                recipients.append(phone)
+
+            # Deduplicate target recipients
+            unique_recipients = list(dict.fromkeys(recipients))
+
+            if not unique_recipients:
+                logger.warning("No recipient numbers configured. Message fallback:\n" + formatted_body)
                 return False
 
             success_count = 0
-            for recipient in recipients:
+            for recipient in unique_recipients:
                 sid = self.send_text_message(to_number=recipient, body=formatted_body)
                 if sid:
                     success_count += 1
