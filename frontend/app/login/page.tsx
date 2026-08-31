@@ -49,6 +49,9 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
+        if (data.access_token) {
+          localStorage.setItem('admin_token', data.access_token);
+        }
         if (data.must_change_password) {
           setMode('must_change_password');
           setSuccessMsg('First-time login detected! Please set a new secure password to proceed.');

@@ -164,7 +164,8 @@ class AuthService:
             "message": "Authentication successful",
             "must_change_password": admin.must_change_password,
             "role": admin.role,
-            "username": admin.username
+            "username": admin.username,
+            "access_token": access_token
         }
 
     @staticmethod

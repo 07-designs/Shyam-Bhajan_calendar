@@ -99,6 +99,7 @@ class LoginResponse(BaseModel):
     must_change_password: bool
     role: str
     username: str
+    access_token: Optional[str] = None
 
 
 class ChangePasswordRequest(BaseModel):
