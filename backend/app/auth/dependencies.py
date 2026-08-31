@@ -48,16 +48,19 @@ def get_current_admin(
     db: Session = Depends(get_db)
 ) -> AdminModel:
     """
-    FastAPI Dependency to authenticate current logged-in admin from cookie or Bearer token.
+    FastAPI Dependency to authenticate current logged-in admin from Bearer token or cookie.
     Validates active status and lockout status.
     """
-    token = admin_session
+    token = None
 
-    # Fallback to Authorization Header if Cookie not present
-    if not token and "authorization" in request.headers:
-        auth_header = request.headers["authorization"]
-        if auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
+    # 1. Check Authorization Header Bearer token first
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+
+    # 2. Fallback to Cookie if Header not present
+    if not token:
+        token = admin_session
 
     if not token:
         raise HTTPException(
