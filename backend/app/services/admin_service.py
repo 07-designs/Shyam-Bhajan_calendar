@@ -35,6 +35,9 @@ class AdminService:
         """
         existing = AdminRepository.get_by_username(db, default_username)
         if existing:
+            if existing.must_change_password:
+                existing.must_change_password = False
+                db.commit()
             return existing
 
         master_admin = AdminModel(
