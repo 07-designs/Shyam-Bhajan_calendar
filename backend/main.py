@@ -62,8 +62,56 @@ app.include_router(members_router)
 
 @app.get("/")
 def root():
+    """Service Health & Status Check Endpoint."""
     return {
         "status": "online",
         "service": "Shyam Bhajan Seva Role-Based Admin Management System",
         "version": "2.0.0"
     }
+
+
+@app.get("/api/test-whatsapp")
+def test_whatsapp_dispatch(to_number: str = "9137570219"):
+    """Diagnostic endpoint to test Twilio WhatsApp dispatch and return exact status/error."""
+    from app.services.whatsapp_service import whatsapp_service, format_whatsapp_number
+    from app.config import settings
+
+    formatted_to = format_whatsapp_number(to_number)
+    formatted_from = format_whatsapp_number(settings.TWILIO_WHATSAPP_FROM) if settings.TWILIO_WHATSAPP_FROM else None
+
+    if not all([settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN, formatted_from]):
+        return {
+            "status": "incomplete_config",
+            "account_sid_present": bool(settings.TWILIO_ACCOUNT_SID),
+            "auth_token_present": bool(settings.TWILIO_AUTH_TOKEN),
+            "from_number": settings.TWILIO_WHATSAPP_FROM,
+            "formatted_from": formatted_from,
+            "target": formatted_to
+        }
+
+    try:
+        client = whatsapp_service._get_client()
+        if not client:
+            return {"status": "client_error", "message": "Failed to instantiate Twilio client"}
+
+        msg = client.messages.create(
+            body="🙏 *Test Notification from Shyam Bhajan Seva*",
+            from_=formatted_from,
+            to=formatted_to
+        )
+        return {
+            "status": "success",
+            "sid": msg.sid,
+            "from": formatted_from,
+            "to": formatted_to,
+            "twilio_status": msg.status,
+            "error_code": msg.error_code,
+            "error_message": msg.error_message
+        }
+    except Exception as e:
+        return {
+            "status": "exception",
+            "error": str(e),
+            "from": formatted_from,
+            "to": formatted_to
+        }
