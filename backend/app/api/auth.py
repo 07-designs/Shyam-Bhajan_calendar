@@ -47,8 +47,8 @@ def login(
 @router.post("/logout")
 def logout(response: Response):
     """Clear admin session cookies."""
-    response.delete_cookie(key="admin_session")
-    response.delete_cookie(key="admin_refresh")
+    response.delete_cookie(key="admin_session", samesite="none", secure=True)
+    response.delete_cookie(key="admin_refresh", samesite="none", secure=True)
     return {"message": "Logged out successfully"}
 
 

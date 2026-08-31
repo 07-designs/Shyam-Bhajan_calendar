@@ -135,20 +135,20 @@ class AuthService:
         access_token = create_access_token(payload)
         refresh_token = create_refresh_token(payload)
 
-        # Set Cookies
+        # Set Cookies (samesite="none" & secure=True required for cross-site Vercel <-> Render cookies)
         response.set_cookie(
             key="admin_session",
             value=access_token,
             httponly=True,
-            samesite="lax",
-            secure=False
+            samesite="none",
+            secure=True
         )
         response.set_cookie(
             key="admin_refresh",
             value=refresh_token,
             httponly=True,
-            samesite="lax",
-            secure=False
+            samesite="none",
+            secure=True
         )
 
         AuditRepository.log_action(
