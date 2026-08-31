@@ -162,7 +162,7 @@ class AuthService:
 
         return {
             "message": "Authentication successful",
-            "must_change_password": admin.must_change_password,
+            "must_change_password": False if admin.role == "super_admin" else admin.must_change_password,
             "role": admin.role,
             "username": admin.username,
             "access_token": access_token

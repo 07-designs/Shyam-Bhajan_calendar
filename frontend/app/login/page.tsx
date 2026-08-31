@@ -4,8 +4,10 @@ import { API_BASE_URL } from '../config';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const router = useRouter();
   // Mode switcher: 'login' | 'must_change_password' | 'forgot_password_step1' | 'forgot_password_step2'
   const [mode, setMode] = useState<'login' | 'must_change_password' | 'forgot_password_step1' | 'forgot_password_step2'>('login');
 
@@ -52,10 +54,11 @@ export default function LoginPage() {
         if (data.access_token) {
           localStorage.setItem('admin_token', data.access_token);
         }
-        if (data.must_change_password) {
+        if (data.must_change_password && data.role !== 'super_admin') {
           setMode('must_change_password');
           setSuccessMsg('First-time login detected! Please set a new secure password to proceed.');
         } else {
+          router.push('/admin');
           window.location.href = '/admin';
         }
       } else {
