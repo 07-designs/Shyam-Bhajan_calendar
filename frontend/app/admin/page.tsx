@@ -139,9 +139,14 @@ export default function AdminDashboard() {
   };
 
   const fetchProfile = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    if (!token) {
+      if (typeof window !== 'undefined') window.location.href = '/login';
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        credentials: 'include',
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -160,7 +165,6 @@ export default function AdminDashboard() {
   const fetchBookings = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/bookings`, {
-        credentials: 'include',
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -177,7 +181,6 @@ export default function AdminDashboard() {
   const fetchMembers = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/members`, {
-        credentials: 'include',
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -192,7 +195,6 @@ export default function AdminDashboard() {
   const fetchAdmins = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins`, {
-        credentials: 'include',
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -221,7 +223,6 @@ export default function AdminDashboard() {
   const fetchAuditLogs = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/audit`, {
-        credentials: 'include',
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -238,7 +239,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/bookings/${id}/status?status_str=${newStatus}`, {
         method: 'PATCH',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       if (res.ok) {
         fetchBookings();
@@ -253,7 +254,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/bookings/${id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       if (res.ok) {
         fetchBookings();
@@ -269,8 +270,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/members`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify(newMember)
       });
       if (res.ok) {
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/members/${id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       if (res.ok) {
         fetchMembers();
@@ -303,8 +303,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins/invite`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           full_name: newAdminName,
           phone_number: newAdminPhone,
@@ -334,8 +333,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins/${admin.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify({ is_active: !admin.is_active })
       });
       if (res.ok) fetchAdmins();
@@ -349,7 +347,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins/${admin.id}/reset-password`, {
         method: 'POST',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       const data = await res.json();
       if (res.ok) {
@@ -365,7 +363,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins/${admin.id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: getAuthHeaders()
       });
       if (res.ok) fetchAdmins();
     } catch (err) {
@@ -381,8 +379,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/settings`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           mandal_name: mandalSettings.mandal_name,
           whatsapp_contact: mandalSettings.whatsapp_contact,
@@ -402,7 +399,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     if (typeof window !== 'undefined') localStorage.removeItem('admin_token');
-    await fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include', headers: getAuthHeaders() });
+    await fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', headers: getAuthHeaders() });
     window.location.href = '/login';
   };
 

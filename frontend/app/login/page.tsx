@@ -58,7 +58,6 @@ export default function LoginPage() {
           setMode('must_change_password');
           setSuccessMsg('First-time login detected! Please set a new secure password to proceed.');
         } else {
-          router.push('/admin');
           window.location.href = '/admin';
         }
       } else {
