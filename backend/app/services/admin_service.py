@@ -89,7 +89,10 @@ class AdminService:
         saved_admin = AdminRepository.create(db, invited_admin)
 
         # Base URL for Next.js frontend invite acceptance page
-        invite_link = f"http://localhost:3000/admin/accept-invite?token={token}"
+        base_panel_url = settings.ADMIN_PANEL_URL.rstrip('/')
+        if "localhost" in base_panel_url:
+            base_panel_url = "https://shreenishanyatraparivar.vercel.app/admin"
+        invite_link = f"{base_panel_url}/accept-invite?token={token}"
 
         AuditRepository.log_action(
             db,
