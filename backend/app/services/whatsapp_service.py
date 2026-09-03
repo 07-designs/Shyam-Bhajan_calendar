@@ -154,10 +154,8 @@ class WhatsAppService:
             )
 
             recipients = list(settings.admin_whatsapp_numbers)
-            if phone and phone != "N/A":
-                recipients.append(phone)
 
-            # Deduplicate target recipients
+            # Deduplicate target admin recipients
             unique_recipients = list(dict.fromkeys(recipients))
 
             if not unique_recipients:
