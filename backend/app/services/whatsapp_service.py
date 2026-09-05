@@ -162,9 +162,41 @@ class WhatsAppService:
                 logger.warning("No recipient numbers configured. Message fallback:\n" + formatted_body)
                 return False
 
+            template_variables = {
+                "1": str(name),
+                "2": str(phone),
+                "3": str(booking_date),
+                "4": str(address),
+                "5": str(notes),
+                "6": str(self.admin_panel_url),
+                "7": str(timestamp)
+            }
+
+            template_sid = settings.TWILIO_TEMPLATE_SID
+
             success_count = 0
             for recipient in unique_recipients:
-                sid = self.send_text_message(to_number=recipient, body=formatted_body)
+                sid = None
+                if template_sid:
+                    try:
+                        import json
+                        formatted_to = format_whatsapp_number(recipient)
+                        formatted_from = format_whatsapp_number(self.from_number) if self.from_number else None
+                        client = self._get_client()
+                        if client and formatted_from:
+                            msg = client.messages.create(
+                                content_sid=template_sid,
+                                content_variables=json.dumps(template_variables),
+                                from_=formatted_from,
+                                to=formatted_to
+                            )
+                            sid = msg.sid
+                    except Exception as tmpl_err:
+                        logger.warning(f"Template dispatch fallback to text message due to: {tmpl_err}")
+
+                if not sid:
+                    sid = self.send_text_message(to_number=recipient, body=formatted_body)
+
                 if sid:
                     success_count += 1
 
