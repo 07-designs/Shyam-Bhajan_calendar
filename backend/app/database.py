@@ -8,28 +8,29 @@ from app.config import settings
 db_url = settings.formatted_database_url
 
 def create_db_engine():
-    # If explicitly SQLite or if PostgreSQL fails, use SQLite engine
+    # If explicitly SQLite
     if "sqlite" in db_url:
         return create_engine(db_url, connect_args={"check_same_thread": False})
 
+    # For PostgreSQL (Render Internal or External URL)
     try:
         eng = create_engine(
             db_url,
-            connect_args={"sslmode": "require"},
             pool_pre_ping=True,
-            pool_recycle=60
+            pool_recycle=300
         )
         with eng.connect() as conn:
             pass
         return eng
     except Exception as e:
-        print(f"⚠️ PostgreSQL connection failed ({e}). Using persistent SQLite database...")
-        return create_engine("sqlite:///./shyam_bhajan.db", connect_args={"check_same_thread": False})
+        print(f"⚠️ PostgreSQL primary connection warning ({e}). Initializing fallback engine...")
+        return create_engine(db_url, pool_pre_ping=True)
 
 
 try:
     engine = create_db_engine()
-except Exception:
+except Exception as err:
+    print(f"⚠️ Initializing SQLite persistent fallback due to: {err}")
     engine = create_engine("sqlite:///./shyam_bhajan.db", connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
