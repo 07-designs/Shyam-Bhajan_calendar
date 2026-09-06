@@ -4,7 +4,6 @@ import { API_BASE_URL } from '../config';
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 
 interface Booking {
   id: number;
@@ -59,7 +58,6 @@ interface MandalSettings {
 function formatTimeAgo(dateString?: string) {
   if (!dateString) return 'Never';
 
-  // If string lacks timezone indicator ('Z' or '+'), append 'Z' so JS parses as UTC
   let isoStr = dateString.trim();
   if (!isoStr.endsWith('Z') && !isoStr.includes('+')) {
     isoStr = isoStr + 'Z';
@@ -70,13 +68,13 @@ function formatTimeAgo(dateString?: string) {
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
   if (seconds < 10 || seconds < 0) return 'Just now';
-  if (seconds < 60) return `${seconds} sec${seconds > 1 ? 's' : ''} ago`;
+  if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+  if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+  if (days < 30) return `${days}d ago`;
   return date.toLocaleDateString();
 }
 
@@ -87,7 +85,7 @@ export default function AdminDashboard() {
   // Bookings & Roster State
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [members, setMembers] = useState<MandalMember[]>([]);
-  
+
   // Admin Management State
   const [adminsList, setAdminsList] = useState<AdminUser[]>([]);
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
@@ -95,7 +93,7 @@ export default function AdminDashboard() {
   const [newAdminPhone, setNewAdminPhone] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminRole, setNewAdminRole] = useState('admin');
-  
+
   // Newly Generated Invite Link Modal
   const [createdInviteResult, setCreatedInviteResult] = useState<{ invite_link: string } | null>(null);
 
@@ -111,9 +109,8 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [newMember, setNewMember] = useState({ name: '', phone: '', role: 'Singer' });
+  const [newMember, setNewMember] = useState({ name: '', phone: '', role: 'Lead Bhajan Singer' });
 
-  // 1. Fetch Profile & Data on Mount
   useEffect(() => {
     fetchProfile();
     fetchBookings();
@@ -234,7 +231,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 2. Booking Status Updates
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/bookings/${id}/status?status_str=${newStatus}`, {
@@ -264,7 +260,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 3. Add Member to Mandal Roster
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -274,7 +269,7 @@ export default function AdminDashboard() {
         body: JSON.stringify(newMember)
       });
       if (res.ok) {
-        setNewMember({ name: '', phone: '', role: 'Singer' });
+        setNewMember({ name: '', phone: '', role: 'Lead Bhajan Singer' });
         fetchMembers();
       }
     } catch (err) {
@@ -297,7 +292,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 4. Super Admin: Invite Admin (WhatsApp Invite Link Flow)
   const handleInviteAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -328,7 +322,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 5. Super Admin: Toggle Active/Deactivate or Reset Password or Delete
   const handleToggleAdminStatus = async (admin: AdminUser) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins/${admin.id}`, {
@@ -371,7 +364,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 6. Save Dynamic Settings
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mandalSettings) return;
@@ -389,7 +381,7 @@ export default function AdminDashboard() {
         })
       });
       if (res.ok) {
-        setSettingsMsg('Mandal configuration & templates saved successfully!');
+        setSettingsMsg('Mandal configuration & templates saved successfully.');
         setTimeout(() => setSettingsMsg(''), 4000);
       }
     } catch (err) {
@@ -403,7 +395,6 @@ export default function AdminDashboard() {
     window.location.href = '/login';
   };
 
-  // Filtering Logic
   const filteredBookings = bookings.filter(b => {
     const matchesStatus = filterStatus === 'All' || b.status === filterStatus;
     const matchesSearch = b.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -419,138 +410,174 @@ export default function AdminDashboard() {
   );
 
   return (
-    <main className="min-h-screen bg-[#140C08] text-[#F8F4EC] pb-16 font-sans">
+    <div className="min-h-screen bg-[#140C08] text-[#F8FAFC] font-sans antialiased">
       
-      {/* ── HEADER BANNER ──────────────────────────────────────────────────────── */}
-      <header className="bg-gradient-to-b from-[#1C120C] via-[#2A1A10] to-[#140C08] border-b border-[#D4A017]/30 pt-8 pb-10 px-4 sm:px-8 relative shadow-2xl">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl border-2 border-[#D4A017]/60 overflow-hidden bg-[#140C08] relative shadow-lg">
-              <Image
-                src="/gallery/krishnaji.png"
-                alt="Krishna Artwork"
-                fill
-                className="object-cover object-top"
-              />
+      {/* ── ENTERPRISE TOP NAVIGATION ────────────────────────────────────────────── */}
+      <header className="border-b border-white/10 bg-[#1A100B]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            
+            {/* Left Brand Identifier */}
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full border border-amber-500/40 overflow-hidden bg-[#140C08] relative shrink-0">
+                <Image
+                  src="/gallery/krishnaji.png"
+                  alt="Mandal Logo"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold text-[#F8FAFC] tracking-tight">
+                  {mandalSettings?.mandal_name || 'Shree Nishan Yatra Parivar'}
+                </h1>
+                <p className="text-[11px] text-[#A89F91]">Management Console</p>
+              </div>
             </div>
-            <div>
-              <span className="inline-block px-3 py-0.5 rounded-full bg-[#D4A017]/15 border border-[#D4A017]/30 text-[#D4A017] text-[10px] uppercase tracking-widest font-semibold mb-1">
-                ✨ Admin Management Portal ✨
+
+            {/* Right Profile & Actions */}
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
               </span>
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#F8F4EC]">
-                <span className="shimmer-gold">{mandalSettings?.mandal_name || 'Shyam Bhajan Seva Mandal'}</span>
-              </h1>
-              <p className="text-xs text-stone-300/80">
-                Logged in as <strong className="text-[#D4A017]">{currentUser?.full_name}</strong> (@{currentUser?.username || 'admin'})
-              </p>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-[#D6C7B2]">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="font-mono text-white">{currentUser?.full_name}</span>
+                {currentUser?.username && (
+                  <span className="text-[#A89F91]">(@{currentUser.username})</span>
+                )}
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-stone-300 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
+              </button>
             </div>
+
           </div>
 
-          {/* Role Pill & Actions */}
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1.5 rounded-xl bg-[#1C120C] border border-[#D4A017]/40 text-xs font-semibold text-[#D4A017] uppercase tracking-wider shadow">
-              {currentUser?.role === 'super_admin' ? '👑 Super Admin' : '👤 Admin'}
-            </span>
+          {/* Sub-Navigation Enterprise Tab Strip */}
+          <nav className="-mb-px flex space-x-8 border-t border-white/5 pt-1">
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className={`py-3 px-1 border-b-2 text-xs font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'bookings'
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-[#A89F91] hover:text-[#D6C7B2] hover:border-white/20'
+              }`}
+            >
+              <span>Event Requests</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === 'bookings' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/5 text-[#A89F91]'
+              }`}>
+                {bookings.length}
+              </span>
+            </button>
 
             <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-semibold hover:bg-red-900/80 transition-all cursor-pointer shadow"
+              onClick={() => setActiveTab('roster')}
+              className={`py-3 px-1 border-b-2 text-xs font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'roster'
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-[#A89F91] hover:text-[#D6C7B2] hover:border-white/20'
+              }`}
             >
-              Logout 🚪
+              <span>Active Roster</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === 'roster' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/5 text-[#A89F91]'
+              }`}>
+                {members.length}
+              </span>
             </button>
-          </div>
 
-        </div>
+            {currentUser?.role === 'super_admin' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('admins')}
+                  className={`py-3 px-1 border-b-2 text-xs font-medium transition-colors flex items-center gap-2 ${
+                    activeTab === 'admins'
+                      ? 'border-amber-500 text-amber-400'
+                      : 'border-transparent text-[#A89F91] hover:text-[#D6C7B2] hover:border-white/20'
+                  }`}
+                >
+                  <span>Admin Management</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                    activeTab === 'admins' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/5 text-[#A89F91]'
+                  }`}>
+                    {adminsList.length}
+                  </span>
+                </button>
 
-        {/* ── TAB SWITCHER ────────────────────────────────────────────────────── */}
-        <div className="max-w-7xl mx-auto mt-8 flex flex-wrap gap-2 border-b border-[#D4A017]/20 pb-1">
-          <button
-            onClick={() => setActiveTab('bookings')}
-            className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
-              activeTab === 'bookings'
-                ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
-                : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
-            }`}
-          >
-            🚩 Event Requests ({bookings.length})
-          </button>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`py-3 px-1 border-b-2 text-xs font-medium transition-colors ${
+                    activeTab === 'settings'
+                      ? 'border-amber-500 text-amber-400'
+                      : 'border-transparent text-[#A89F91] hover:text-[#D6C7B2] hover:border-white/20'
+                  }`}
+                >
+                  <span>Mandal Settings</span>
+                </button>
 
-          <button
-            onClick={() => setActiveTab('roster')}
-            className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
-              activeTab === 'roster'
-                ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
-                : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
-            }`}
-          >
-            🪕 Active Roster ({members.length})
-          </button>
-
-          {currentUser?.role === 'super_admin' && (
-            <>
-              <button
-                onClick={() => setActiveTab('admins')}
-                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
-                  activeTab === 'admins'
-                    ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
-                    : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
-                }`}
-              >
-                👥 Admin Management
-              </button>
-
-              <button
-                onClick={() => setActiveTab('settings')}
-                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
-                  activeTab === 'settings'
-                    ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
-                    : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
-                }`}
-              >
-                ⚙️ Mandal Settings
-              </button>
-
-              <button
-                onClick={() => setActiveTab('audit')}
-                className={`px-5 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border-t border-x ${
-                  activeTab === 'audit'
-                    ? 'bg-[#140C08] border-[#D4A017]/50 text-[#D4A017] shadow-lg'
-                    : 'bg-[#1C120C]/60 border-transparent text-stone-400 hover:text-stone-200'
-                }`}
-              >
-                📜 Security Audit Logs
-              </button>
-            </>
-          )}
+                <button
+                  onClick={() => setActiveTab('audit')}
+                  className={`py-3 px-1 border-b-2 text-xs font-medium transition-colors ${
+                    activeTab === 'audit'
+                      ? 'border-amber-500 text-amber-400'
+                      : 'border-transparent text-[#A89F91] hover:text-[#D6C7B2] hover:border-white/20'
+                  }`}
+                >
+                  <span>Security Audit Logs</span>
+                </button>
+              </>
+            )}
+          </nav>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-8">
+      {/* ── MAIN CONTENT AREA ────────────────────────────────────────────────────── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ── TAB 1: BOOKING REQUESTS MANAGEMENT ────────────────────────────── */}
         {activeTab === 'bookings' && (
           <div className="space-y-6">
             
-            <div className="glass-devotional-card p-4 rounded-2xl border border-[#D4A017]/25 flex flex-col md:flex-row justify-between items-center gap-4">
-              <input
-                type="text"
-                placeholder="Search by Host Name, Phone, or Address..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full md:w-96 px-4 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs focus:ring-2 focus:ring-[#D4A017] outline-none"
-              />
+            {/* Header & Controls Toolbar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.02] p-4 rounded-xl border border-white/10">
+              
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-80">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#A89F91]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by Host, Phone, or Address..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-[#1C120C] border border-white/10 text-white placeholder-[#A89F91] rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
+                />
+              </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold text-stone-400">Filter Status:</span>
+              {/* Status Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-[#A89F91] mr-1 hidden lg:inline">Status:</span>
                 {['All', 'Pending', 'Approved', 'Rescheduled', 'Rejected'].map(st => (
                   <button
                     key={st}
                     onClick={() => setFilterStatus(st)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       filterStatus === st
-                        ? 'bg-[#D4A017] text-[#140C08]'
-                        : 'bg-[#140C08] border border-[#D4A017]/25 text-stone-300 hover:border-[#D4A017]'
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                        : 'text-[#A89F91] hover:text-[#D6C7B2] hover:bg-white/5 border border-transparent'
                     }`}
                   >
                     {st}
@@ -559,67 +586,91 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="glass-devotional-card rounded-2xl border border-[#D4A017]/25 overflow-hidden shadow-xl">
+            {/* Clean Enterprise Data Table */}
+            <div className="bg-white/[0.02] rounded-xl border border-white/10 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-stone-200">
-                  <thead className="bg-[#140C08] text-[#D4A017] uppercase tracking-wider font-semibold text-[11px] border-b border-[#D4A017]/20">
-                    <tr>
-                      <th className="p-4">ID</th>
-                      <th className="p-4">Host Name</th>
-                      <th className="p-4">Date</th>
-                      <th className="p-4">Contact</th>
-                      <th className="p-4">Address</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Actions</th>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/[0.02] text-xs font-semibold text-[#A89F91] uppercase tracking-wider">
+                      <th className="py-3.5 px-4 font-mono">ID</th>
+                      <th className="py-3.5 px-4">Host Name</th>
+                      <th className="py-3.5 px-4">Preferred Date</th>
+                      <th className="py-3.5 px-4">Contact Phone</th>
+                      <th className="py-3.5 px-4">Event Address</th>
+                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#D4A017]/10">
+                  <tbody className="divide-y divide-white/5 text-xs">
                     {filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-stone-400 italic">
-                          No booking requests match the selected criteria.
+                        <td colSpan={7} className="py-12 px-4 text-center">
+                          <div className="flex flex-col items-center justify-center space-y-2">
+                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-[#A89F91]">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <p className="text-sm font-medium text-white">No booking requests found</p>
+                            <p className="text-xs text-[#A89F91]">No records match your selected status or search filter.</p>
+                          </div>
                         </td>
                       </tr>
                     ) : (
                       filteredBookings.map(b => (
-                        <tr key={b.id} className="hover:bg-[#241710]/40 transition-colors">
-                          <td className="p-4 font-mono font-bold text-[#D4A017]">#{b.id}</td>
-                          <td className="p-4 font-semibold text-[#F8F4EC]">{b.full_name}</td>
-                          <td className="p-4 font-medium text-amber-200/90">{b.booking_date}</td>
-                          <td className="p-4">
+                        <tr key={b.id} className="hover:bg-white/[0.02] transition-colors align-middle">
+                          <td className="py-3.5 px-4 font-mono font-medium text-amber-400/90">#{b.id}</td>
+                          <td className="py-3.5 px-4 font-medium text-white">{b.full_name}</td>
+                          <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">{b.booking_date}</td>
+                          <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">
                             <div>{b.phone}</div>
-                            {b.alt_phone && <div className="text-[10px] text-stone-400">Alt: {b.alt_phone}</div>}
+                            {b.alt_phone && <div className="text-[10px] text-[#A89F91]">Alt: {b.alt_phone}</div>}
                           </td>
-                          <td className="p-4 max-w-xs truncate">{b.address}</td>
-                          <td className="p-4">
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              b.status === 'Approved' ? 'bg-emerald-950 border border-emerald-500/50 text-emerald-300' :
-                              b.status === 'Pending' ? 'bg-amber-950 border border-amber-500/50 text-amber-300 animate-pulse' :
-                              b.status === 'Rescheduled' ? 'bg-blue-950 border border-blue-500/50 text-blue-300' :
-                              'bg-rose-950 border border-rose-500/50 text-rose-300'
+                          <td className="py-3.5 px-4 text-[#D6C7B2] max-w-xs truncate">{b.address}</td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+                              b.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              b.status === 'Pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                              b.status === 'Rescheduled' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                              'bg-rose-500/10 text-rose-400 border-rose-500/20'
                             }`}>
                               {b.status}
                             </span>
                           </td>
-                          <td className="p-4 text-right space-x-1">
-                            <button
-                              onClick={() => handleUpdateStatus(b.id, 'Approved')}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-800 transition-all cursor-pointer"
-                            >
-                              Approve ✓
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(b.id, 'Rescheduled')}
-                              className="px-2.5 py-1 rounded-lg bg-blue-900/60 border border-blue-500/40 text-blue-300 hover:bg-blue-800 transition-all cursor-pointer"
-                            >
-                              Reschedule 📅
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBooking(b.id)}
-                              className="px-2 py-1 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400 hover:bg-red-900 transition-all cursor-pointer"
-                            >
-                              Delete 🗑️
-                            </button>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {b.status !== 'Approved' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(b.id, 'Approved')}
+                                  className="p-1.5 rounded-md border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                                  title="Approve Booking"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                              )}
+                              {b.status !== 'Rescheduled' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(b.id, 'Rescheduled')}
+                                  className="p-1.5 rounded-md border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 transition-all"
+                                  title="Mark Rescheduled"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteBooking(b.id)}
+                                className="p-1.5 rounded-md border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all"
+                                title="Delete Booking"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -636,39 +687,42 @@ export default function AdminDashboard() {
         {activeTab === 'roster' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <div className="glass-devotional-card p-6 rounded-2xl border border-[#D4A017]/25 h-fit">
-              <h2 className="text-lg font-serif font-bold text-[#F8F4EC] mb-4">
-                <span className="shimmer-gold">Add Mandal Performer</span>
-              </h2>
-              <form onSubmit={handleAddMember} className="space-y-4">
+            {/* Left Add Member Form */}
+            <div className="bg-white/[0.02] p-6 rounded-xl border border-white/10 h-fit space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-white">Add Mandal Performer</h2>
+                <p className="text-xs text-[#A89F91] mt-0.5">Register active artists and volunteers into the roster.</p>
+              </div>
+
+              <form onSubmit={handleAddMember} className="space-y-4 pt-2">
                 <div>
-                  <label className="block text-xs font-semibold text-stone-300 mb-1 uppercase">Full Name *</label>
+                  <label className="block text-xs font-medium text-[#D6C7B2] mb-1">Full Name *</label>
                   <input
                     type="text"
                     required
                     value={newMember.name}
                     onChange={e => setNewMember({ ...newMember, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
-                    placeholder="e.g., Pandit Suresh Kumar"
+                    className="w-full px-3 py-2 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all placeholder-[#A89F91]"
+                    placeholder="e.g. Pandit Suresh Kumar"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-300 mb-1 uppercase">WhatsApp Phone *</label>
+                  <label className="block text-xs font-medium text-[#D6C7B2] mb-1">Phone Number *</label>
                   <input
                     type="text"
                     required
                     value={newMember.phone}
                     onChange={e => setNewMember({ ...newMember, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
-                    placeholder="+919876543210"
+                    className="w-full px-3 py-2 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all font-mono placeholder-[#A89F91]"
+                    placeholder="+91 98765 43210"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-300 mb-1 uppercase">Role *</label>
+                  <label className="block text-xs font-medium text-[#D6C7B2] mb-1">Performance Role *</label>
                   <select
                     value={newMember.role}
                     onChange={e => setNewMember({ ...newMember, role: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                    className="w-full px-3 py-2 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
                   >
                     <option value="Lead Bhajan Singer">Lead Bhajan Singer</option>
                     <option value="Harmonium Master">Harmonium Master</option>
@@ -680,39 +734,58 @@ export default function AdminDashboard() {
 
                 <button
                   type="submit"
-                  className="w-full bg-[#D4A017] text-[#140C08] font-bold py-2.5 rounded-xl text-xs hover:bg-[#C77A1A] hover:text-white transition-all cursor-pointer"
+                  className="w-full py-2.5 rounded-lg bg-amber-500 text-stone-950 font-semibold text-xs hover:bg-amber-400 transition-all shadow-md mt-2 flex items-center justify-center gap-1.5"
                 >
-                  + Add Member to Roster
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Add Member to Roster</span>
                 </button>
               </form>
             </div>
 
+            {/* Right Roster Grid */}
             <div className="lg:col-span-2 space-y-4">
-              <h2 className="text-lg font-serif font-bold text-[#F8F4EC]">
-                Active Mandal Roster ({members.length})
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {members.map(m => (
-                  <div key={m.id} className="glass-devotional-card p-4 rounded-2xl border border-[#D4A017]/25 flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-sm text-[#F8F4EC]">{m.name}</h3>
-                      <span className="inline-block text-[10px] text-[#D4A017] bg-[#D4A017]/10 px-2 py-0.5 rounded-full border border-[#D4A017]/20 my-1 font-mono">
-                        {m.role}
-                      </span>
-                      <p className="text-xs text-stone-400">{m.phone}</p>
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteMember(m.id)}
-                      className="p-2 bg-red-950/60 border border-red-500/40 text-red-400 rounded-xl hover:bg-red-900 transition-all text-xs cursor-pointer"
-                      title="Remove Member"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                ))}
+              <div className="flex justify-between items-center">
+                <h2 className="text-base font-semibold text-white">Active Mandal Roster</h2>
+                <span className="text-xs text-[#A89F91] font-mono">{members.length} Total Members</span>
               </div>
+
+              {members.length === 0 ? (
+                <div className="bg-white/[0.02] p-12 rounded-xl border border-white/10 text-center">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-[#A89F91] mx-auto mb-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-white">No active roster members</p>
+                  <p className="text-xs text-[#A89F91]">Add your first performer using the form on the left.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {members.map(m => (
+                    <div key={m.id} className="bg-white/[0.02] p-4 rounded-xl border border-white/10 flex justify-between items-center hover:border-white/20 transition-all">
+                      <div>
+                        <h3 className="font-semibold text-sm text-white">{m.name}</h3>
+                        <span className="inline-block text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 my-1.5 font-mono">
+                          {m.role}
+                        </span>
+                        <p className="text-xs font-mono text-[#A89F91]">{m.phone}</p>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteMember(m.id)}
+                        className="p-2 border border-rose-500/30 text-rose-400 rounded-lg hover:bg-rose-500/10 transition-all"
+                        title="Remove Member"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
@@ -722,87 +795,90 @@ export default function AdminDashboard() {
         {activeTab === 'admins' && currentUser?.role === 'super_admin' && (
           <div className="space-y-6">
             
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-serif font-bold text-[#F8F4EC]">
-                  <span className="shimmer-gold">Admin Management System</span>
-                </h2>
-                <p className="text-xs text-stone-400">
-                  Send WhatsApp Invite Links to new administrators, manage roles, and track relative last logins.
-                </p>
+                <h2 className="text-base font-semibold text-white">Administrator Accounts</h2>
+                <p className="text-xs text-[#A89F91]">Manage role-based permissions, issue WhatsApp invitations, and audit access.</p>
               </div>
 
               <button
                 onClick={() => setShowAddAdminModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#D4A017] text-[#140C08] text-xs font-bold hover:bg-[#C77A1A] hover:text-white transition-all shadow-lg cursor-pointer flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-amber-500 text-stone-950 text-xs font-semibold hover:bg-amber-400 transition-all shadow-md flex items-center gap-2"
               >
-                <span>+</span> Send WhatsApp Invite Link 📲
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span>Send WhatsApp Invite Link</span>
               </button>
             </div>
 
             {/* Admins Table */}
-            <div className="glass-devotional-card rounded-2xl border border-[#D4A017]/25 overflow-hidden shadow-xl">
+            <div className="bg-white/[0.02] rounded-xl border border-white/10 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-stone-200">
-                  <thead className="bg-[#140C08] text-[#D4A017] uppercase tracking-wider font-semibold text-[11px] border-b border-[#D4A017]/20">
-                    <tr>
-                      <th className="p-4">Admin Name</th>
-                      <th className="p-4">Username</th>
-                      <th className="p-4">Role</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Last Login</th>
-                      <th className="p-4">Phone Number</th>
-                      <th className="p-4 text-right">Actions</th>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/[0.02] text-xs font-semibold text-[#A89F91] uppercase tracking-wider">
+                      <th className="py-3.5 px-4">Admin Name</th>
+                      <th className="py-3.5 px-4">Username</th>
+                      <th className="py-3.5 px-4">Role</th>
+                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4">Last Login</th>
+                      <th className="py-3.5 px-4">Phone Number</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#D4A017]/10">
+                  <tbody className="divide-y divide-white/5 text-xs">
                     {adminsList.map(adm => (
-                      <tr key={adm.id} className="hover:bg-[#241710]/40 transition-colors">
-                        <td className="p-4 font-semibold text-[#F8F4EC]">{adm.full_name}</td>
-                        <td className="p-4 font-mono text-[#D4A017]">
-                          {adm.username ? `@${adm.username}` : <span className="text-stone-500 italic">Pending Setup</span>}
+                      <tr key={adm.id} className="hover:bg-white/[0.02] transition-colors align-middle">
+                        <td className="py-3.5 px-4 font-medium text-white">{adm.full_name}</td>
+                        <td className="py-3.5 px-4 font-mono text-amber-400">
+                          {adm.username ? `@${adm.username}` : <span className="text-[#A89F91] italic font-sans text-[11px]">Pending Setup</span>}
                         </td>
-                        <td className="p-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            adm.role === 'super_admin' ? 'bg-amber-950 border border-amber-500/50 text-amber-300' :
-                            'bg-stone-900 border border-stone-600 text-stone-300'
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${
+                            adm.role === 'super_admin' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                            'bg-white/5 text-stone-300 border-white/10'
                           }`}>
-                            {adm.role === 'super_admin' ? '👑 Super Admin' : '👤 Admin'}
+                            {adm.role === 'super_admin' ? 'Super Admin' : 'Admin'}
                           </span>
                         </td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            adm.is_active ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40' : 'bg-amber-950 text-amber-400 border border-amber-500/40'
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${
+                            adm.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           }`}>
                             {adm.is_active ? 'Active' : 'Pending Invite'}
                           </span>
                         </td>
-                        {/* 🌟 Relative Time Ago Display */}
-                        <td className="p-4 font-medium text-stone-300">
+                        <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">
                           {formatTimeAgo(adm.last_login)}
                         </td>
-                        <td className="p-4">{adm.phone_number}</td>
-                        <td className="p-4 text-right space-x-1">
-                          <button
-                            onClick={() => handleToggleAdminStatus(adm)}
-                            className="px-2 py-1 rounded bg-stone-800 border border-stone-600 hover:bg-stone-700 text-[11px] transition-all cursor-pointer"
-                          >
-                            {adm.is_active ? 'Disable' : 'Enable'}
-                          </button>
-                          <button
-                            onClick={() => handleResetAdminPassword(adm)}
-                            className="px-2 py-1 rounded bg-amber-950 border border-amber-600 text-amber-300 hover:bg-amber-900 text-[11px] transition-all cursor-pointer"
-                          >
-                            Resend Invite 📲
-                          </button>
-                          {adm.id !== currentUser.id && (
+                        <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">{adm.phone_number}</td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => handleDeleteAdmin(adm)}
-                              className="px-2 py-1 rounded bg-red-950 border border-red-600 text-red-400 hover:bg-red-900 text-[11px] transition-all cursor-pointer"
+                              onClick={() => handleToggleAdminStatus(adm)}
+                              className="px-2.5 py-1 rounded-md border border-white/10 text-stone-300 hover:text-white hover:bg-white/5 text-xs transition-all"
                             >
-                              Soft Delete 🗑️
+                              {adm.is_active ? 'Disable' : 'Enable'}
                             </button>
-                          )}
+                            <button
+                              onClick={() => handleResetAdminPassword(adm)}
+                              className="px-2.5 py-1 rounded-md border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-xs transition-all"
+                            >
+                              Resend Invite
+                            </button>
+                            {adm.id !== currentUser.id && (
+                              <button
+                                onClick={() => handleDeleteAdmin(adm)}
+                                className="p-1 rounded-md border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all"
+                                title="Soft Delete Account"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -818,24 +894,25 @@ export default function AdminDashboard() {
         {activeTab === 'settings' && currentUser?.role === 'super_admin' && mandalSettings && (
           <div className="space-y-6 max-w-4xl">
             <div>
-              <h2 className="text-xl font-serif font-bold text-[#F8F4EC]">
-                <span className="shimmer-gold">⚙️ Dynamic Mandal Settings</span>
-              </h2>
-              <p className="text-xs text-stone-400">
-                Update Mandal contact numbers, notification dispatch lists, and WhatsApp templates without code modifications.
+              <h2 className="text-base font-semibold text-white">Mandal System Settings</h2>
+              <p className="text-xs text-[#A89F91]">
+                Manage contact channels, admin notification numbers, and WhatsApp templates.
               </p>
             </div>
 
             {settingsMsg && (
-              <div className="p-4 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 rounded-xl text-xs font-semibold">
-                ✅ {settingsMsg}
+              <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{settingsMsg}</span>
               </div>
             )}
 
-            <form onSubmit={handleSaveSettings} className="glass-devotional-card p-6 sm:p-8 rounded-3xl border border-[#D4A017]/25 space-y-6">
+            <form onSubmit={handleSaveSettings} className="bg-white/[0.02] p-6 sm:p-8 rounded-xl border border-white/10 space-y-6">
               
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1.5 uppercase tracking-wider">
                   Mandal Organization Name *
                 </label>
                 <input
@@ -843,13 +920,13 @@ export default function AdminDashboard() {
                   required
                   value={mandalSettings.mandal_name}
                   onChange={e => setMandalSettings({ ...mandalSettings, mandal_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-sm focus:ring-2 focus:ring-[#D4A017] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-medium text-[#D6C7B2] mb-1.5 uppercase tracking-wider">
                     Primary WhatsApp Contact *
                   </label>
                   <input
@@ -857,26 +934,26 @@ export default function AdminDashboard() {
                     required
                     value={mandalSettings.whatsapp_contact}
                     onChange={e => setMandalSettings({ ...mandalSettings, whatsapp_contact: e.target.value })}
-                    className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-sm focus:ring-2 focus:ring-[#D4A017] outline-none"
+                    className="w-full px-4 py-2.5 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
-                    Website Contact Phone Numbers *
+                  <label className="block text-xs font-medium text-[#D6C7B2] mb-1.5 uppercase tracking-wider">
+                    Website Contact Numbers *
                   </label>
                   <input
                     type="text"
                     required
                     value={mandalSettings.website_contact_numbers}
                     onChange={e => setMandalSettings({ ...mandalSettings, website_contact_numbers: e.target.value })}
-                    className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-sm focus:ring-2 focus:ring-[#D4A017] outline-none"
+                    className="w-full px-4 py-2.5 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1.5 uppercase tracking-wider">
                   Admin Notification WhatsApp Numbers (Comma-Separated) *
                 </label>
                 <input
@@ -884,16 +961,16 @@ export default function AdminDashboard() {
                   required
                   value={mandalSettings.admin_notification_numbers}
                   onChange={e => setMandalSettings({ ...mandalSettings, admin_notification_numbers: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#D4A017] rounded-xl text-sm font-mono focus:ring-2 focus:ring-[#D4A017] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#1C120C] border border-white/10 text-amber-400 rounded-lg text-xs font-mono outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
                   placeholder="whatsapp:+919876543210, whatsapp:+919123456789"
                 />
-                <p className="text-[11px] text-stone-400 mt-1">
-                  Add 1, 2, or 3+ WhatsApp numbers separated by commas to receive new booking alerts.
+                <p className="text-[11px] text-[#A89F91] mt-1">
+                  Add 1 or more WhatsApp numbers separated by commas to receive new booking notifications.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1.5 uppercase tracking-wider">
                   Booking Auto-Reply WhatsApp Message Template *
                 </label>
                 <textarea
@@ -901,15 +978,15 @@ export default function AdminDashboard() {
                   required
                   value={mandalSettings.booking_auto_reply_template}
                   onChange={e => setMandalSettings({ ...mandalSettings, booking_auto_reply_template: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs focus:ring-2 focus:ring-[#D4A017] outline-none leading-relaxed"
+                  className="w-full px-4 py-2.5 bg-[#1C120C] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all font-mono leading-relaxed"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#D4A017] text-[#140C08] font-bold text-xs hover:bg-[#C77A1A] hover:text-white transition-all cursor-pointer shadow-xl"
+                className="px-6 py-2.5 rounded-lg bg-amber-500 text-stone-950 font-semibold text-xs hover:bg-amber-400 transition-all shadow-md"
               >
-                Save Configuration & Templates 💾
+                Save Settings & Configuration
               </button>
             </form>
 
@@ -920,53 +997,56 @@ export default function AdminDashboard() {
         {activeTab === 'audit' && currentUser?.role === 'super_admin' && (
           <div className="space-y-6">
             
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-serif font-bold text-[#F8F4EC]">
-                  <span className="shimmer-gold">Security Audit Trail</span>
-                </h2>
-                <p className="text-xs text-stone-400">
-                  Immutable record of system authentications, admin invitations, password changes, and booking actions.
-                </p>
+                <h2 className="text-base font-semibold text-white">Security Audit Log</h2>
+                <p className="text-xs text-[#A89F91]">Immutable trail of admin authentications, invitations, and state modifications.</p>
               </div>
 
-              <input
-                type="text"
-                placeholder="Filter logs by username or action..."
-                value={auditSearch}
-                onChange={e => setAuditSearch(e.target.value)}
-                className="w-full md:w-80 px-4 py-2 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none"
-              />
+              <div className="relative w-full sm:w-72">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#A89F91]">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Filter by user or action..."
+                  value={auditSearch}
+                  onChange={e => setAuditSearch(e.target.value)}
+                  className="w-full pl-8 pr-4 py-1.5 bg-[#1C120C] border border-white/10 text-white placeholder-[#A89F91] rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
+                />
+              </div>
             </div>
 
-            <div className="glass-devotional-card rounded-2xl border border-[#D4A017]/25 overflow-hidden shadow-xl">
+            <div className="bg-white/[0.02] rounded-xl border border-white/10 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-stone-200">
-                  <thead className="bg-[#140C08] text-[#D4A017] uppercase tracking-wider font-semibold text-[11px] border-b border-[#D4A017]/20">
-                    <tr>
-                      <th className="p-4">Timestamp</th>
-                      <th className="p-4">User</th>
-                      <th className="p-4">Action Event</th>
-                      <th className="p-4">Details</th>
-                      <th className="p-4">IP Address</th>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/[0.02] text-xs font-semibold text-[#A89F91] uppercase tracking-wider">
+                      <th className="py-3.5 px-4 font-mono">Timestamp</th>
+                      <th className="py-3.5 px-4">User</th>
+                      <th className="py-3.5 px-4">Action Event</th>
+                      <th className="py-3.5 px-4">Details</th>
+                      <th className="py-3.5 px-4 font-mono">IP Address</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#D4A017]/10 font-mono text-[11px]">
+                  <tbody className="divide-y divide-white/5 font-mono text-xs">
                     {filteredAuditLogs.map(log => (
-                      <tr key={log.id} className="hover:bg-[#241710]/40 transition-colors">
-                        <td className="p-4 text-amber-200/90">{formatTimeAgo(log.timestamp)}</td>
-                        <td className="p-4 text-[#D4A017] font-bold">@{log.user_username}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            log.action.includes('SUCCESS') || log.action.includes('ACCEPTED') ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' :
-                            log.action.includes('FAILED') || log.action.includes('LOCKED') ? 'bg-red-950 text-red-300 border border-red-500/40' :
-                            'bg-blue-950 text-blue-300 border border-blue-500/40'
+                      <tr key={log.id} className="hover:bg-white/[0.02] transition-colors align-middle">
+                        <td className="py-3.5 px-4 text-[#D6C7B2]">{formatTimeAgo(log.timestamp)}</td>
+                        <td className="py-3.5 px-4 text-amber-400 font-medium">@{log.user_username}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
+                            log.action.includes('SUCCESS') || log.action.includes('ACCEPTED') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            log.action.includes('FAILED') || log.action.includes('LOCKED') ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                            'bg-blue-500/10 text-blue-400 border-blue-500/20'
                           }`}>
                             {log.action}
                           </span>
                         </td>
-                        <td className="p-4 font-sans text-stone-300">{log.details}</td>
-                        <td className="p-4 text-stone-400">{log.ip_address}</td>
+                        <td className="py-3.5 px-4 font-sans text-[#D6C7B2]">{log.details}</td>
+                        <td className="py-3.5 px-4 text-[#A89F91]">{log.ip_address}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -977,64 +1057,73 @@ export default function AdminDashboard() {
           </div>
         )}
 
-      </div>
+      </main>
 
       {/* ── MODAL 1: ISSUE ADMIN WHATSAPP INVITE ─────────────────────────────── */}
       {showAddAdminModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-devotional-card p-6 sm:p-8 rounded-3xl border border-[#D4A017]/40 max-w-md w-full relative shadow-2xl">
-            <h3 className="text-xl font-serif font-bold text-[#F8F4EC] mb-2">
-              <span className="shimmer-gold">📲 Issue WhatsApp Admin Invite</span>
-            </h3>
-            <p className="text-xs text-stone-300/80 mb-6">
-              Generates a secure 24-hour invitation link dispatched via Twilio WhatsApp so the new Admin can set their username & password.
+          <div className="bg-[#1C120C] p-6 sm:p-8 rounded-xl border border-white/10 max-w-md w-full relative shadow-2xl space-y-5">
+            <div className="flex justify-between items-center border-b border-white/10 pb-4">
+              <h3 className="text-base font-semibold text-white">Issue WhatsApp Admin Invite</h3>
+              <button
+                onClick={() => setShowAddAdminModal(false)}
+                className="text-[#A89F91] hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-xs text-[#A89F91]">
+              Generates a secure 24-hour invitation link dispatched via WhatsApp so the new admin can configure credentials.
             </p>
 
             <form onSubmit={handleInviteAdmin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">Full Name *</label>
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={newAdminName}
                   onChange={e => setNewAdminName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
-                  placeholder="e.g., Nilesh Sharma"
+                  className="w-full px-3 py-2 bg-[#140C08] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50"
+                  placeholder="e.g. Nilesh Sharma"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">WhatsApp Phone *</label>
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1">WhatsApp Phone *</label>
                 <input
                   type="text"
                   required
                   value={newAdminPhone}
                   onChange={e => setNewAdminPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  className="w-full px-3 py-2 bg-[#140C08] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50 font-mono"
                   placeholder="whatsapp:+919876543210"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">Email Address (Optional)</label>
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1">Email Address (Optional)</label>
                 <input
                   type="email"
                   value={newAdminEmail}
                   onChange={e => setNewAdminEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  className="w-full px-3 py-2 bg-[#140C08] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50"
                   placeholder="nilesh@example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-200 mb-1 uppercase">Role *</label>
+                <label className="block text-xs font-medium text-[#D6C7B2] mb-1">Role *</label>
                 <select
                   value={newAdminRole}
                   onChange={e => setNewAdminRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#D4A017]"
+                  className="w-full px-3 py-2 bg-[#140C08] border border-white/10 text-white rounded-lg text-xs outline-none focus:ring-1 focus:ring-amber-500/50"
                 >
                   <option value="admin">Admin (Bookings & Roster Control)</option>
-                  <option value="super_admin">Super Admin (Full RBAC System Control)</option>
+                  <option value="super_admin">Super Admin (Full Access)</option>
                 </select>
               </div>
 
@@ -1042,15 +1131,15 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowAddAdminModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-stone-600 text-stone-300 text-xs font-semibold hover:bg-stone-800 cursor-pointer"
+                  className="flex-1 py-2 rounded-lg border border-white/10 text-stone-300 text-xs font-medium hover:bg-white/5"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#D4A017] text-[#140C08] text-xs font-bold hover:bg-[#C77A1A] hover:text-white cursor-pointer shadow-lg"
+                  className="flex-1 py-2 rounded-lg bg-amber-500 text-stone-950 text-xs font-semibold hover:bg-amber-400"
                 >
-                  Generate & Send Invite 📲
+                  Generate & Send Invite
                 </button>
               </div>
             </form>
@@ -1061,42 +1150,46 @@ export default function AdminDashboard() {
       {/* ── MODAL 2: GENERATED INVITE LINK DISPLAY ──────────────────────────── */}
       {createdInviteResult && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-devotional-card p-6 sm:p-8 rounded-3xl border border-emerald-500/50 max-w-md w-full relative shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-950 border border-emerald-500 flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">📲</span>
+          <div className="bg-[#1C120C] p-6 sm:p-8 rounded-xl border border-emerald-500/30 max-w-md w-full relative shadow-2xl text-center space-y-4">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
 
-            <h3 className="text-xl font-serif font-bold text-[#F8F4EC] mb-2">
+            <h3 className="text-base font-semibold text-white">
               WhatsApp Invite Link Generated
             </h3>
-            <p className="text-xs text-stone-300 mb-6">
-              The invitation link has been queued for WhatsApp delivery. You can also copy it manually:
+            <p className="text-xs text-[#A89F91]">
+              The invitation link has been dispatched via WhatsApp. You can also copy it manually:
             </p>
 
-            <div className="bg-[#140C08] border border-[#D4A017]/30 p-3 rounded-2xl text-left font-mono text-[11px] text-[#D4A017] break-all mb-4">
+            <div className="bg-[#140C08] border border-white/10 p-3 rounded-lg text-left font-mono text-[11px] text-amber-400 break-all">
               {createdInviteResult.invite_link}
             </div>
 
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(createdInviteResult.invite_link);
-                alert('Invite link copied to clipboard!');
-              }}
-              className="w-full py-2.5 mb-2 rounded-xl bg-[#1C120C] border border-[#D4A017]/40 text-[#D4A017] font-semibold text-xs hover:bg-[#2A1A10] cursor-pointer"
-            >
-              📋 Copy Invite Link to Clipboard
-            </button>
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(createdInviteResult.invite_link);
+                  alert('Invite link copied to clipboard.');
+                }}
+                className="w-full py-2 rounded-lg bg-white/5 border border-white/10 text-stone-200 font-medium text-xs hover:bg-white/10"
+              >
+                Copy Link to Clipboard
+              </button>
 
-            <button
-              onClick={() => setCreatedInviteResult(null)}
-              className="w-full py-3 rounded-xl bg-[#D4A017] text-[#140C08] font-bold text-xs hover:bg-[#C77A1A] hover:text-white cursor-pointer"
-            >
-              Close Window
-            </button>
+              <button
+                onClick={() => setCreatedInviteResult(null)}
+                className="w-full py-2 rounded-lg bg-amber-500 text-stone-950 font-semibold text-xs hover:bg-amber-400"
+              >
+                Close Window
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-    </main>
+    </div>
   );
 }
