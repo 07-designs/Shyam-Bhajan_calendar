@@ -145,6 +145,33 @@ class BookingCreate(BaseModel):
     alt_phone: Optional[str] = None
     booking_date: date
 
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: str) -> str:
+        v_clean = v.strip() if v else ""
+        if len(v_clean) < 3:
+            raise ValueError("Full name must be at least 3 characters long.")
+        if not any(c.isalpha() for c in v_clean):
+            raise ValueError("Full name must contain valid letters.")
+        return v_clean
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        import re
+        digits_only = re.sub(r"\D", "", v) if v else ""
+        if len(digits_only) < 10 or len(digits_only) > 15:
+            raise ValueError("Phone number must contain at least 10 digits.")
+        return v.strip()
+
+    @field_validator("address")
+    @classmethod
+    def validate_address(cls, v: str) -> str:
+        v_clean = v.strip() if v else ""
+        if len(v_clean) < 5:
+            raise ValueError("Address must be at least 5 characters long.")
+        return v_clean
+
     @field_validator("booking_date", mode="before")
     @classmethod
     def parse_booking_date(cls, v):

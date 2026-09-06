@@ -32,7 +32,7 @@ interface BookingResponse {
   status: string;
 }
 
-type SubmitStatus = 'idle' | 'success' | 'error_conflict' | 'error_generic';
+type SubmitStatus = 'idle' | 'success' | 'error_conflict' | 'error_generic' | 'error_validation';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ export default function Home() {
   // UI state
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+  const [validationError, setValidationError] = useState<string>('');
   const [bookedDates, setBookedDates] = useState<string[]>([]);
   const [dateConflict, setDateConflict] = useState<boolean>(false);
 
@@ -179,13 +180,46 @@ export default function Home() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setIsSubmitting(true);
     setSubmitStatus('idle');
+    setValidationError('');
+
+    // 1. Validate Full Name
+    const cleanName = formData.full_name.trim();
+    if (cleanName.length < 3 || !/[a-zA-Z]/.test(cleanName)) {
+      setValidationError('Please enter a valid full name (at least 3 letters).');
+      setSubmitStatus('error_validation');
+      return;
+    }
+
+    // 2. Validate Phone Number
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      setValidationError('Please enter a valid 10-digit phone number.');
+      setSubmitStatus('error_validation');
+      return;
+    }
+
+    // 3. Validate Address
+    const cleanAddress = formData.address.trim();
+    if (cleanAddress.length < 5) {
+      setValidationError('Please enter a complete address (at least 5 characters).');
+      setSubmitStatus('error_validation');
+      return;
+    }
+
+    // 4. Validate Date Selection
+    if (!formData.booking_date) {
+      setValidationError('Please select a valid booking date.');
+      setSubmitStatus('error_validation');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const payload: BookingCreatePayload = {
-        full_name: formData.full_name,
-        address: formData.address,
-        phone: formData.phone,
+        full_name: cleanName,
+        address: cleanAddress,
+        phone: formData.phone.trim(),
         alt_phone: null,
         booking_date: formData.booking_date,
       };
@@ -201,6 +235,13 @@ export default function Home() {
         await fetchBookedDates();
       } else if (res.status === 400) {
         setSubmitStatus('error_conflict');
+      } else if (res.status === 422) {
+        const errData = await res.json().catch(() => ({}));
+        const detailMsg = Array.isArray(errData?.detail) 
+          ? errData.detail.map((d: { msg?: string }) => d.msg).join(', ')
+          : 'Please enter valid booking details and credentials.';
+        setValidationError(detailMsg || 'Please enter valid booking details and credentials.');
+        setSubmitStatus('error_validation');
       } else {
         setSubmitStatus('error_generic');
       }
@@ -691,6 +732,12 @@ export default function Home() {
                     </div>
 
                     {/* Error messages */}
+                    {submitStatus === 'error_validation' && (
+                      <div className="p-3.5 bg-red-950/90 border border-red-500/60 text-red-200 rounded-xl text-sm font-medium flex items-start gap-2 shadow-lg">
+                        <span className="text-base leading-none">⚠️</span>
+                        <span>{validationError || 'Please enter valid booking details and credentials.'}</span>
+                      </div>
+                    )}
                     {submitStatus === 'error_conflict' && (
                       <div className="p-3.5 bg-amber-950/80 border border-amber-500/50 text-amber-300 rounded-xl text-sm font-medium">
                         This date is already reserved. Please choose another date.
