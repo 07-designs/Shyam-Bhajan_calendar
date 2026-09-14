@@ -191,10 +191,10 @@ export default function Home() {
       return;
     }
 
-    // 2. Validate Phone Number
+    // 2. Validate Phone Number (Strictly 10 digits)
     const phoneDigits = formData.phone.replace(/\D/g, '');
-    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
-      setValidationError('Please enter a valid 10-digit phone number.');
+    if (phoneDigits.length !== 10) {
+      setValidationError('Please enter a valid 10-digit contact number.');
       setSubmitStatus('error_validation');
       return;
     }
@@ -207,9 +207,18 @@ export default function Home() {
       return;
     }
 
-    // 4. Validate Date Selection
+    // 4. Validate Date Selection (Must not be in the past)
     if (!formData.booking_date) {
       setValidationError('Please select a valid booking date.');
+      setSubmitStatus('error_validation');
+      return;
+    }
+
+    const selectedDate = new Date(formData.booking_date);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    if (selectedDate < todayDate) {
+      setValidationError('Booking date cannot be in the past. Please select today or a future date.');
       setSubmitStatus('error_validation');
       return;
     }
@@ -691,6 +700,7 @@ export default function Home() {
                         id="booking_date"
                         name="booking_date"
                         required
+                        min={new Date().toISOString().split('T')[0]}
                         value={formData.booking_date}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl focus:ring-2 focus:ring-[#D4A017] focus:border-transparent outline-none transition-all shadow-inner"
