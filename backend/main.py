@@ -43,9 +43,11 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:8000",
         "https://shreenishanyatraparivar.vercel.app",
-        "https://shyam-bhajan-calendar.vercel.app"
+        "https://shyam-bhajan-calendar.vercel.app",
+        "https://shreenishanyatraparivar.in",
+        "https://www.shreenishanyatraparivar.in"
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\.(vercel\.app|in)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     TWILIO_WHATSAPP_FROM: Optional[str] = None
     TWILIO_TEMPLATE_SID: Optional[str] = "HXe40d62a791ce1dd8ad225e8c0fd5d783"
     ADMIN_WHATSAPP_NUMBER: Optional[str] = None
-    ADMIN_PANEL_URL: str = "https://shreenishanyatraparivar.vercel.app/admin"
+    ADMIN_PANEL_URL: str = "https://shreenishanyatraparivar.in/admin"
 
     # Admin Authentication & Security
     ADMIN_USERNAME: str = "shyam_bhajan_admin"
