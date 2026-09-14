@@ -111,12 +111,20 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [newMember, setNewMember] = useState({ name: '', phone: '', role: 'Lead Bhajan Singer' });
 
+  // Auth & Checking state
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+
   useEffect(() => {
     fetchProfile();
-    fetchBookings();
-    fetchMembers();
-    fetchSettings();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchBookings();
+      fetchMembers();
+      fetchSettings();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser?.role === 'super_admin') {
@@ -149,6 +157,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data);
+        setIsAuthChecking(false);
       } else {
         if (typeof window !== 'undefined') localStorage.removeItem('admin_token');
         window.location.href = '/login';
@@ -408,6 +417,17 @@ export default function AdminDashboard() {
     log.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
     log.details.toLowerCase().includes(auditSearch.toLowerCase())
   );
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-[#140C08] flex items-center justify-center text-[#F8FAFC]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-[#A89F91]">Verifying authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#140C08] text-[#F8FAFC] font-sans antialiased">
