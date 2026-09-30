@@ -1189,6 +1189,15 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-2 pt-2">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`🙏 *Jai Shree Shyam*\n\nYou have been invited as an Admin for Shree Nishan Yatra Parivar.\nClick the link below to accept your invitation:\n👉 ${createdInviteResult.invite_link}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-500 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40"
+              >
+                <span>📱</span> Share via WhatsApp
+              </a>
+
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(createdInviteResult.invite_link);

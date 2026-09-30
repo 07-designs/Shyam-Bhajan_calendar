@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: Optional[str] = None
     TWILIO_WHATSAPP_FROM: Optional[str] = None
     TWILIO_TEMPLATE_SID: Optional[str] = "HXe40d62a791ce1dd8ad225e8c0fd5d783"
+    TWILIO_INVITE_TEMPLATE_SID: Optional[str] = "HX5ba46daf8112ab9c4cd44a519b6daf1a"
     ADMIN_WHATSAPP_NUMBER: Optional[str] = None
     ADMIN_PANEL_URL: str = "https://shreenishanyatraparivar.in/admin"
 

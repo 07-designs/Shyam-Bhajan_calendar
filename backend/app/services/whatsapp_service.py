@@ -101,18 +101,44 @@ class WhatsAppService:
 
     def send_admin_invite_link(self, to_number: str, full_name: str, invite_link: str) -> bool:
         """
-        Send WhatsApp invite link to a new Admin recipient.
+        Send WhatsApp invite link to a new Admin recipient using Meta Content Template if configured,
+        or fallback to direct text message.
         """
-        body = (
-            f"🙏 *Jai Shree Shyam*\n\n"
-            f"Welcome to Nishan Yatra Mandal!\n\n"
-            f"You have been invited by Super Admin as an Administrator for *{full_name}*.\n\n"
-            f"Please click the link below to set up your username and password:\n"
-            f"👉 {invite_link}\n\n"
-            f"This invite link will expire in 24 hours.\n\n"
-            f"Jai Shree Shyam 🙏"
-        )
-        sid = self.send_text_message(to_number=to_number, body=body)
+        template_sid = settings.TWILIO_INVITE_TEMPLATE_SID
+        sid = None
+        if template_sid:
+            try:
+                import json
+                formatted_to = format_whatsapp_number(to_number)
+                formatted_from = format_whatsapp_number(self.from_number) if self.from_number else None
+                client = self._get_client()
+                if client and formatted_from:
+                    template_variables = {
+                        "1": str(full_name),
+                        "2": str(invite_link)
+                    }
+                    msg = client.messages.create(
+                        content_sid=template_sid,
+                        content_variables=json.dumps(template_variables),
+                        from_=formatted_from,
+                        to=formatted_to
+                    )
+                    sid = msg.sid
+            except Exception as tmpl_err:
+                logger.warning(f"Invite template dispatch failed, falling back to text message: {tmpl_err}")
+
+        if not sid:
+            body = (
+                f"🙏 *Jai Shree Shyam*\n\n"
+                f"Welcome to Nishan Yatra Mandal!\n\n"
+                f"You have been invited by Super Admin as an Administrator for *{full_name}*.\n\n"
+                f"Please click the link below to set up your username and password:\n"
+                f"👉 {invite_link}\n\n"
+                f"This invite link will expire in 24 hours.\n\n"
+                f"Jai Shree Shyam 🙏"
+            )
+            sid = self.send_text_message(to_number=to_number, body=body)
+
         return sid is not None
 
     def send_otp_notification(self, to_number: str, username: str, otp_code: str) -> bool:
