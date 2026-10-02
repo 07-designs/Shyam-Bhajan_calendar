@@ -3,6 +3,7 @@
 import { API_BASE_URL } from './config';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 
 // ── TypeScript Interfaces ──────────────────────────────────────────────────────
 
@@ -271,9 +272,16 @@ export default function Home() {
           {/* Left: site title with shimmer on scroll */}
           <button
             onClick={() => scrollTo(homeRef)}
-            className="font-bold text-xl tracking-wide flex items-center gap-2 group"
+            className="font-bold text-xl tracking-wide flex items-center gap-2.5 group"
           >
-            <span className="text-2xl group-hover:animate-bounce inline-block">🙏</span>
+            <div className="w-8 h-8 rounded-full border border-amber-500/40 overflow-hidden bg-[#140C08] relative shrink-0">
+              <Image
+                src="/logo.jpeg"
+                alt="Shree Nishan Yatra Parivar Logo"
+                fill
+                className="object-cover"
+              />
+            </div>
             <span className={`transition-all duration-300 ${scrolled ? 'shimmer-gold' : 'text-white'}`}>
               Shree Nishan Yatra Parivar
             </span>
