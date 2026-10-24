@@ -357,9 +357,9 @@ export default function Home() {
           {/* 1. Seamless Full-Canvas Krishna Artwork Composition Background */}
           <div className="absolute inset-0 z-0">
             <img
-              src="/gallery/krishna_hero.jpg"
-              alt="Kanhaji Khatu Shyam Ji Divine Hero Canvas"
-              className="w-full h-full object-cover object-right lg:object-[85%_center] transition-transform duration-1000 hover:scale-[1.02] opacity-95"
+              src="/gallery/kanhaji_hero.jpg"
+              alt="Shree Kanhaji Divine Hero Canvas"
+              className="w-full h-full object-cover object-[78%_center] lg:object-[82%_center] transition-transform duration-1000 hover:scale-[1.02] opacity-95"
             />
           </div>
 
