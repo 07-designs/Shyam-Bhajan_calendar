@@ -16,6 +16,21 @@ from app.api.settings import router as settings_router
 # Automatically create schema tables in database if missing
 try:
     Base.metadata.create_all(bind=engine)
+    # Safe automatic schema migrations for bookings table
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        for stmt in [
+            "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS seva_type VARCHAR DEFAULT 'Shree Shyam Kirtan Seva'",
+            "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS notes TEXT",
+            "ALTER TABLE bookings ALTER COLUMN booking_date DROP NOT NULL",
+            "ALTER TABLE bookings ALTER COLUMN address DROP NOT NULL"
+        ]:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                pass
+
     db: Session = SessionLocal()
     try:
         AdminService.ensure_initial_super_admin(

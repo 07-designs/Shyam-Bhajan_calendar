@@ -35,21 +35,27 @@ def create_booking(
     Validates request date uniqueness, saves booking to DB, and queues WhatsApp alert in BackgroundTasks.
     """
     try:
-        # 1. Validate date availability
-        existing = db.query(BookingModel).filter(BookingModel.booking_date == booking.booking_date).first()
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail="This date is already allocated or pending confirmation."
-            )
+        # 1. Validate date availability (Only if booking_date is provided)
+        if booking.booking_date:
+            existing = db.query(BookingModel).filter(
+                BookingModel.booking_date == booking.booking_date,
+                BookingModel.status != "Rejected"
+            ).first()
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This date is already allocated or pending confirmation."
+                )
 
         # 2. Save booking to database
         db_booking = BookingModel(
+            seva_type=booking.seva_type or "Shree Shyam Kirtan Seva",
             full_name=booking.full_name,
-            address=booking.address,
+            address=booking.address or "Khatu Dham Darshan (Guide Request)",
             phone=booking.phone,
             alt_phone=booking.alt_phone,
-            booking_date=booking.booking_date
+            booking_date=booking.booking_date,
+            notes=booking.notes
         )
         try:
             db.add(db_booking)
@@ -64,12 +70,15 @@ def create_booking(
 
         # 3. Queue non-blocking WhatsApp alert via BackgroundTasks
         try:
+            date_str = str(db_booking.booking_date) if db_booking.booking_date else "Flexible (Guide Seva)"
+            address_str = db_booking.address or "Khatu Dham Darshan"
+            notes_str = f"[{db_booking.seva_type}] {booking.notes or ''}".strip()
             booking_payload = {
                 "full_name": db_booking.full_name,
                 "phone": db_booking.phone,
-                "address": db_booking.address,
-                "booking_date": str(db_booking.booking_date),
-                "notes": getattr(booking, "notes", "None") or "None"
+                "address": address_str,
+                "booking_date": date_str,
+                "notes": notes_str or "None"
             }
             background_tasks.add_task(send_booking_notification_task, booking_payload)
         except Exception as ws_err:

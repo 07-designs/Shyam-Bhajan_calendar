@@ -7,11 +7,13 @@ import Image from 'next/image';
 
 interface Booking {
   id: number;
+  seva_type?: string;
   full_name: string;
   phone: string;
   alt_phone?: string;
-  address: string;
-  booking_date: string;
+  address?: string;
+  booking_date?: string;
+  notes?: string;
   status: string;
 }
 
@@ -408,7 +410,8 @@ export default function AdminDashboard() {
     const matchesStatus = filterStatus === 'All' || b.status === filterStatus;
     const matchesSearch = b.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           b.phone.includes(searchTerm) ||
-                          b.address.toLowerCase().includes(searchTerm.toLowerCase());
+                          (b.address ? b.address.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+                          (b.seva_type ? b.seva_type.toLowerCase().includes(searchTerm.toLowerCase()) : false);
     return matchesStatus && matchesSearch;
   });
 
@@ -613,6 +616,7 @@ export default function AdminDashboard() {
                   <thead>
                     <tr className="border-b border-white/10 bg-white/[0.02] text-xs font-semibold text-[#A89F91] uppercase tracking-wider">
                       <th className="py-3.5 px-4 font-mono">ID</th>
+                      <th className="py-3.5 px-4">Seva Type</th>
                       <th className="py-3.5 px-4">Host Name</th>
                       <th className="py-3.5 px-4">Preferred Date</th>
                       <th className="py-3.5 px-4">Contact Phone</th>
@@ -624,7 +628,7 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-white/5 text-xs">
                     {filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 px-4 text-center">
+                        <td colSpan={8} className="py-12 px-4 text-center">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-[#A89F91]">
                               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -640,13 +644,22 @@ export default function AdminDashboard() {
                       filteredBookings.map(b => (
                         <tr key={b.id} className="hover:bg-white/[0.02] transition-colors align-middle">
                           <td className="py-3.5 px-4 font-mono font-medium text-amber-400/90">#{b.id}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                              {b.seva_type || 'Kirtan Seva'}
+                            </span>
+                          </td>
                           <td className="py-3.5 px-4 font-medium text-white">{b.full_name}</td>
-                          <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">{b.booking_date}</td>
+                          <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">
+                            {b.booking_date || <span className="text-[#A89F91] italic">Flexible</span>}
+                          </td>
                           <td className="py-3.5 px-4 font-mono text-[#D6C7B2]">
                             <div>{b.phone}</div>
                             {b.alt_phone && <div className="text-[10px] text-[#A89F91]">Alt: {b.alt_phone}</div>}
                           </td>
-                          <td className="py-3.5 px-4 text-[#D6C7B2] max-w-xs truncate">{b.address}</td>
+                          <td className="py-3.5 px-4 text-[#D6C7B2] max-w-xs truncate">
+                            {b.address || <span className="text-[#A89F91] italic">Khatu Dham (Guide Request)</span>}
+                          </td>
                           <td className="py-3.5 px-4">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
                               b.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :

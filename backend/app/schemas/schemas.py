@@ -139,11 +139,13 @@ class AuditLogResponse(BaseModel):
 
 class BookingCreate(BaseModel):
     """Schema for incoming booking creation payload."""
+    seva_type: Optional[str] = "Shree Shyam Kirtan Seva"
     full_name: str
-    address: str
+    address: Optional[str] = None
     phone: str
     alt_phone: Optional[str] = None
-    booking_date: date
+    booking_date: Optional[date] = None
+    notes: Optional[str] = None
 
     @field_validator("full_name")
     @classmethod
@@ -166,15 +168,19 @@ class BookingCreate(BaseModel):
 
     @field_validator("address")
     @classmethod
-    def validate_address(cls, v: str) -> str:
-        v_clean = v.strip() if v else ""
-        if len(v_clean) < 5:
-            raise ValueError("Address must be at least 5 characters long.")
+    def validate_address(cls, v: Optional[str]) -> Optional[str]:
+        if not v or not v.strip():
+            return None
+        v_clean = v.strip()
+        if len(v_clean) < 3:
+            raise ValueError("Address must be at least 3 characters long if provided.")
         return v_clean
 
     @field_validator("booking_date", mode="before")
     @classmethod
     def parse_booking_date(cls, v):
+        if v is None or v == "" or (isinstance(v, str) and not v.strip()):
+            return None
         if isinstance(v, date):
             return v
         if isinstance(v, str):
@@ -192,9 +198,16 @@ class BookingCreate(BaseModel):
         return v
 
 
-class BookingResponse(BookingCreate):
+class BookingResponse(BaseModel):
     """Schema for returned booking objects."""
     id: int
+    seva_type: Optional[str] = "Shree Shyam Kirtan Seva"
+    full_name: str
+    address: Optional[str] = None
+    phone: str
+    alt_phone: Optional[str] = None
+    booking_date: Optional[date] = None
+    notes: Optional[str] = None
     status: str
 
     model_config = {"from_attributes": True}

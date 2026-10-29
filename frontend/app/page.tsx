@@ -7,7 +7,47 @@ import Image from 'next/image';
 
 // ── TypeScript Interfaces ──────────────────────────────────────────────────────
 
+interface SevaOption {
+  id: string;
+  name: string;
+  hindiTitle: string;
+  description: string;
+  isDateAndAddressRequired: boolean;
+}
+
+export const SEVA_OPTIONS: SevaOption[] = [
+  {
+    id: 'kirtan_seva',
+    name: 'Shree Shyam Kirtan Seva',
+    hindiTitle: 'श्री श्याम कीर्तन सेवा',
+    description: 'Soulful home or hall Bhajan Sandhya with full Mandal musical accompaniment & dhun',
+    isDateAndAddressRequired: true,
+  },
+  {
+    id: 'akhand_jyoti',
+    name: 'Akhand Jyoti Path Seva',
+    hindiTitle: 'अखंड ज्योति पाठ सेवा',
+    description: 'Sacred Akhand Jyoti invocation & auspicious Path recital with devotional rituals',
+    isDateAndAddressRequired: true,
+  },
+  {
+    id: 'weaker_section',
+    name: 'Free Kirtan for Weaker Section',
+    hindiTitle: 'निःशुल्क कीर्तन सेवा (आर्थिक रूप से कमजोर परिवारों हेतु)',
+    description: 'Selfless devotional kirtan seva organized free of cost for families in need',
+    isDateAndAddressRequired: true,
+  },
+  {
+    id: 'khatu_guide',
+    name: 'Khatu Dham Darshan & Guide Seva',
+    hindiTitle: 'खाटू धाम दर्शन एवं गाइड सेवा',
+    description: 'Yatra planning, darshan guidance, and devotee assistance for Khatu Shyam Ji Dham',
+    isDateAndAddressRequired: false,
+  },
+];
+
 interface BookingFormData {
+  seva_type: string;
   full_name: string;
   phone: string;
   address: string;
@@ -16,20 +56,24 @@ interface BookingFormData {
 }
 
 interface BookingCreatePayload {
+  seva_type: string;
   full_name: string;
-  address: string;
+  address: string | null;
   phone: string;
   alt_phone: null;
-  booking_date: string;
+  booking_date: string | null;
+  notes?: string;
 }
 
 interface BookingResponse {
   id: number;
+  seva_type?: string;
   full_name: string;
-  address: string;
+  address: string | null;
   phone: string;
   alt_phone: string | null;
-  booking_date: string;
+  booking_date: string | null;
+  notes?: string | null;
   status: string;
 }
 
@@ -40,6 +84,7 @@ type SubmitStatus = 'idle' | 'success' | 'error_conflict' | 'error_generic' | 'e
 export default function Home() {
   // Form state
   const [formData, setFormData] = useState<BookingFormData>({
+    seva_type: 'kirtan_seva',
     full_name: '',
     phone: '',
     address: '',
@@ -161,7 +206,7 @@ export default function Home() {
       const res = await fetch(`${API_BASE_URL}/api/bookings`);
       if (!res.ok) return;
       const data: BookingResponse[] = await res.json();
-      setBookedDates(data.map((b) => b.booking_date));
+      setBookedDates(data.map((b) => b.booking_date).filter((d): d is string => Boolean(d)));
     } catch {
       // silently suppress — graceful degradation
     }
@@ -171,7 +216,7 @@ export default function Home() {
     fetchBookedDates();
   }, []);
 
-  function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (name === 'booking_date') {
@@ -184,7 +229,10 @@ export default function Home() {
     setSubmitStatus('idle');
     setValidationError('');
 
-    // 1. Validate Full Name
+    const isKhatuGuide = formData.seva_type === 'khatu_guide';
+    const selectedSeva = SEVA_OPTIONS.find((s) => s.id === formData.seva_type) || SEVA_OPTIONS[0];
+
+    // 1. Validate Full Name (Mandatory for all)
     const cleanName = formData.full_name.trim();
     if (cleanName.length < 3 || !/[a-zA-Z]/.test(cleanName)) {
       setValidationError('Please enter a valid full name (at least 3 letters).');
@@ -192,7 +240,7 @@ export default function Home() {
       return;
     }
 
-    // 2. Validate Phone Number (Strictly 10 digits)
+    // 2. Validate Phone Number (Strictly 10 digits for all)
     const phoneDigits = formData.phone.replace(/\D/g, '');
     if (phoneDigits.length !== 10) {
       setValidationError('Please enter a valid 10-digit contact number.');
@@ -200,38 +248,66 @@ export default function Home() {
       return;
     }
 
-    // 3. Validate Address
-    const cleanAddress = formData.address.trim();
-    if (cleanAddress.length < 5) {
-      setValidationError('Please enter a complete address (at least 5 characters).');
-      setSubmitStatus('error_validation');
-      return;
+    // 3. Validate Address (Mandatory for Kirtan/Path/Nishulk, Optional for Khatu Guide)
+    let cleanAddress: string | null = formData.address.trim() || null;
+    if (!isKhatuGuide) {
+      if (!cleanAddress || cleanAddress.length < 5) {
+        setValidationError('Please enter a complete event address (at least 5 characters).');
+        setSubmitStatus('error_validation');
+        return;
+      }
+    } else {
+      if (!cleanAddress) {
+        cleanAddress = 'Khatu Dham Darshan (Guide Request)';
+      }
     }
 
-    // 4. Validate Date Selection (Must not be in the past)
-    if (!formData.booking_date) {
-      setValidationError('Please select a valid booking date.');
-      setSubmitStatus('error_validation');
-      return;
-    }
+    // 4. Validate Date Selection (Mandatory for Kirtan/Path/Nishulk, Optional for Khatu Guide)
+    const finalBookingDate: string | null = formData.booking_date ? formData.booking_date.trim() : null;
+    if (!isKhatuGuide) {
+      if (!finalBookingDate) {
+        setValidationError('Please select a valid booking date.');
+        setSubmitStatus('error_validation');
+        return;
+      }
 
-    const selectedDate = new Date(formData.booking_date);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    if (selectedDate < todayDate) {
-      setValidationError('Booking date cannot be in the past. Please select today or a future date.');
-      setSubmitStatus('error_validation');
-      return;
+      const selectedDate = new Date(finalBookingDate);
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      if (selectedDate < todayDate) {
+        setValidationError('Booking date cannot be in the past. Please select today or a future date.');
+        setSubmitStatus('error_validation');
+        return;
+      }
+
+      if (bookedDates.includes(finalBookingDate)) {
+        setSubmitStatus('error_conflict');
+        return;
+      }
+    } else {
+      // Optional for Khatu Guide Seva: if provided, verify not in past
+      if (finalBookingDate) {
+        const selectedDate = new Date(finalBookingDate);
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        if (selectedDate < todayDate) {
+          setValidationError('Travel date cannot be in the past. Please select today or a future date.');
+          setSubmitStatus('error_validation');
+          return;
+        }
+      }
     }
 
     setIsSubmitting(true);
     try {
       const payload: BookingCreatePayload = {
+        seva_type: selectedSeva.name,
         full_name: cleanName,
         address: cleanAddress,
         phone: formData.phone.trim(),
         alt_phone: null,
-        booking_date: formData.booking_date,
+        booking_date: finalBookingDate,
+        notes: formData.notes ? `[Seva: ${selectedSeva.name}] ${formData.notes.trim()}` : `[Seva: ${selectedSeva.name}]`,
       };
       const res = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
@@ -240,7 +316,7 @@ export default function Home() {
       });
       if (res.status === 201) {
         setSubmitStatus('success');
-        setFormData({ full_name: '', phone: '', address: '', booking_date: '', notes: '' });
+        setFormData({ seva_type: 'kirtan_seva', full_name: '', phone: '', address: '', booking_date: '', notes: '' });
         setDateConflict(false);
         await fetchBookedDates();
       } else if (res.status === 400) {
@@ -352,7 +428,7 @@ export default function Home() {
       <main className="pb-16">
 
         {/* ── Hero Section (World-Class Cinematic Devotional Landing Canvas) ──────────────────────────────────────────────── */}
-        <div ref={homeRef} className="relative w-full overflow-hidden bg-[#140C08] text-[#F8F4EC] min-h-[95vh] lg:min-h-[100vh] flex items-center shadow-2xl border-b border-[#D4A017]/15">
+        <div ref={homeRef} className="relative w-full overflow-hidden bg-[#140C08] text-[#F8F4EC] min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] flex items-center shadow-2xl border-b border-[#D4A017]/15">
 
           {/* 1. Seamless Full-Canvas Krishna Artwork Composition Background */}
           <div className="absolute inset-0 z-0">
@@ -370,7 +446,7 @@ export default function Home() {
           <div className="absolute inset-0 z-10 hero-devotional-overlay pointer-events-none" />
 
           {/* Bottom Fade into page background */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#140C08] via-[#140C08]/60 to-transparent z-10 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#140C08] via-[#140C08]/60 to-transparent z-10 pointer-events-none" />
 
           {/* Ambient floating golden particles & twinkling dots */}
           {[
@@ -388,58 +464,48 @@ export default function Home() {
           ))}
 
           {/* 4. Floating Left-Aligned Content Container */}
-          <div className="relative z-20 w-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-20 lg:py-28 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="relative z-20 w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-0 lg:h-full lg:flex lg:items-center grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <div className="lg:col-span-7 text-left space-y-7 max-w-2xl">
+            <div className="lg:col-span-7 xl:col-span-6 text-left space-y-4 sm:space-y-4 lg:space-y-5 max-w-xl xl:max-w-2xl">
               
-              {/* Devotional Tagline Badge */}
-              <div className="animate-fade-in-down">
-                <span className="inline-flex items-center gap-2 bg-[#D4A017]/15 border border-[#D4A017]/35 text-[#D4A017] font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-full tracking-wider backdrop-blur-md shadow-sm">
-                  <span>✨</span>
-                  <span>Where devotion meets your doorstep</span>
-                  <span>•</span>
-                  <span>JAI SHREE SHYAM</span>
-                  <span>✨</span>
-                </span>
-              </div>
-
               {/* Headline */}
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-[#F8F4EC] leading-[1.15] tracking-tight animate-fade-in-up delay-200">
+              <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] lg:text-[2.9rem] xl:text-[3.4rem] font-serif font-bold text-[#F8F4EC] leading-[1.12] tracking-tight animate-fade-in-up">
                 Invite Baba Shyam&apos;s{' '}
                 <span className="shimmer-gold block sm:inline">Divine Grace</span>{' '}
                 Into Your Home
               </h1>
 
               {/* Paragraph Description (~45-55 chars per line) */}
-              <p className="text-[#F8F4EC]/85 text-base sm:text-lg lg:text-xl max-w-xl leading-relaxed animate-fade-in-up delay-300 font-light">
+              <p className="text-[#F8F4EC]/85 text-sm sm:text-base lg:text-[1.05rem] max-w-lg leading-relaxed animate-fade-in-up delay-200 font-light">
                 Book a Bhajan Sandhya with our Mandal — soulful kirtan, harmonium, dholak, and dhun. A divine evening of devotion at your doorstep.
               </p>
+
               {/* CTA Buttons */}
-              <div className="flex flex-wrap items-center gap-5 pt-3 animate-fade-in-up delay-400">
+              <div className="flex flex-wrap items-center gap-3.5 sm:gap-4 pt-1.5 sm:pt-2 animate-fade-in-up delay-300">
                 <button
                   onClick={() => scrollTo(bookRef)}
-                  className="inline-flex items-center bg-[#D4A017] text-[#2A1A10] font-bold text-base sm:text-lg px-9 py-4 rounded-full shadow-2xl hover:scale-105 hover:bg-[#C77A1A] hover:text-white transition-all duration-300 animate-pulse-gold"
+                  className="inline-flex items-center bg-[#D4A017] text-[#2A1A10] font-bold text-sm sm:text-base px-6 sm:px-7 py-3 sm:py-3.5 rounded-full shadow-2xl hover:scale-105 hover:bg-[#C77A1A] hover:text-white transition-all duration-300 animate-pulse-gold cursor-pointer"
                 >
                   Book Your Date
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 ml-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
 
                 <button
                   onClick={() => scrollTo(aboutRef)}
-                  className="inline-flex items-center border border-white/25 text-[#F8F4EC] font-semibold text-base sm:text-lg px-8 py-4 rounded-full hover:bg-white/15 hover:border-amber-300/80 transition-all duration-300 backdrop-blur-md bg-white/10"
+                  className="inline-flex items-center border border-white/25 text-[#F8F4EC] font-semibold text-sm sm:text-base px-6 sm:px-7 py-3 sm:py-3.5 rounded-full hover:bg-white/15 hover:border-amber-300/80 transition-all duration-300 backdrop-blur-md bg-white/10 cursor-pointer"
                 >
                   Learn More
                 </button>
               </div>
 
               {/* Trust Social Proof / Sub-Badge */}
-              <div className="pt-2 flex items-center gap-3 animate-fade-in-up delay-500 text-xs text-amber-200/90 font-medium">
+              <div className="pt-1 flex items-center gap-3 animate-fade-in-up delay-400 text-xs text-amber-200/90 font-medium">
                 <div className="flex -space-x-2">
-                  <span className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-200">🙏</span>
-                  <span className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-200">🌸</span>
-                  <span className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-200">✨</span>
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-200">🙏</span>
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-200">🌸</span>
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-200">✨</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-amber-400">★★★★★</span>
@@ -670,6 +736,48 @@ export default function Home() {
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
 
+                    {/* Seva Type Dropdown Selector */}
+                    <div>
+                      <label htmlFor="seva_type" className="block text-sm font-medium text-stone-200 mb-1.5 flex items-center justify-between">
+                        <span>Select Seva / सेवा चयन *</span>
+                        <span className="text-xs text-amber-400 font-mono">4 Sacred Sevas</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="seva_type"
+                          name="seva_type"
+                          value={formData.seva_type}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3.5 bg-[#140C08] border border-[#D4A017]/40 text-[#F8F4EC] rounded-xl focus:ring-2 focus:ring-[#D4A017] focus:border-transparent outline-none transition-all shadow-inner font-medium text-sm sm:text-base appearance-none cursor-pointer pr-10"
+                        >
+                          {SEVA_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id} className="bg-[#1C120C] text-[#F8F4EC] py-2">
+                              {opt.name} — {opt.hindiTitle}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-amber-400">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Informational Guidance Notice for Khatu Guide Seva */}
+                      {formData.seva_type === 'khatu_guide' ? (
+                        <div className="mt-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-amber-200 animate-fade-in">
+                          <span className="text-base shrink-0">🪔</span>
+                          <span className="leading-relaxed">
+                            <strong>खाटू धाम दर्शन एवं गाइड सेवा:</strong> For Khatu Guide Seva, Date and Venue Address are <strong>optional</strong>. You may leave them blank — our Mandal sevaks will coordinate directly with you on WhatsApp / Phone to assist your Yatra.
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-xs text-stone-400 font-light">
+                          {SEVA_OPTIONS.find((o) => o.id === formData.seva_type)?.description}
+                        </p>
+                      )}
+                    </div>
+
                     {/* Name + Phone row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -700,38 +808,56 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Preferred Date */}
+                    {/* Preferred Date (Conditional) */}
                     <div>
-                      <label htmlFor="booking_date" className="block text-sm font-medium text-stone-200 mb-1.5">Preferred Date *</label>
+                      <label htmlFor="booking_date" className="block text-sm font-medium text-stone-200 mb-1.5 flex items-center justify-between">
+                        <span>
+                          {formData.seva_type === 'khatu_guide' ? 'Preferred Travel / Darshan Date' : 'Preferred Date *'}
+                        </span>
+                        {formData.seva_type === 'khatu_guide' && (
+                          <span className="text-xs text-amber-400/80 font-normal italic">(Optional)</span>
+                        )}
+                      </label>
                       <input
                         type="date"
                         id="booking_date"
                         name="booking_date"
-                        required
+                        required={formData.seva_type !== 'khatu_guide'}
                         min={new Date().toISOString().split('T')[0]}
                         value={formData.booking_date}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl focus:ring-2 focus:ring-[#D4A017] focus:border-transparent outline-none transition-all shadow-inner"
                       />
-                      {dateConflict && (
+                      {dateConflict && formData.seva_type !== 'khatu_guide' && (
                         <p className="mt-1.5 text-sm text-amber-400 font-medium">
                           ⚠️ This date is already reserved. Please choose another date.
                         </p>
                       )}
                     </div>
 
-                    {/* Address */}
+                    {/* Address (Conditional) */}
                     <div>
-                      <label htmlFor="address" className="block text-sm font-medium text-stone-200 mb-1.5">Event Address *</label>
+                      <label htmlFor="address" className="block text-sm font-medium text-stone-200 mb-1.5 flex items-center justify-between">
+                        <span>
+                          {formData.seva_type === 'khatu_guide' ? 'City / Location' : 'Event Address *'}
+                        </span>
+                        {formData.seva_type === 'khatu_guide' && (
+                          <span className="text-xs text-amber-400/80 font-normal italic">(Optional)</span>
+                        )}
+                      </label>
                       <textarea
                         id="address"
                         name="address"
-                        required
-                        rows={3}
+                        required={formData.seva_type !== 'khatu_guide'}
+                        rows={formData.seva_type === 'khatu_guide' ? 2 : 3}
                         value={formData.address}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 bg-[#140C08] border border-[#D4A017]/30 text-[#F8F4EC] rounded-xl focus:ring-2 focus:ring-[#D4A017] focus:border-transparent outline-none transition-all resize-none placeholder-stone-500 shadow-inner"
-                        placeholder="Enter the complete address for the Bhajan Sandhya..."
+                        placeholder={
+                          formData.seva_type === 'khatu_guide'
+                            ? 'Enter your city or location (Optional)...'
+                            : 'Enter the complete address for the Bhajan Sandhya...'
+                        }
                       />
                     </div>
 

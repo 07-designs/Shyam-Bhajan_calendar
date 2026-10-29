@@ -77,16 +77,18 @@ class AuditLogModel(Base):
 
 class BookingModel(Base):
     """
-    SQLAlchemy model representing a Bhajan Sandhya event booking request.
+    SQLAlchemy model representing a Bhajan Sandhya or Khatu Guide Seva booking request.
     """
     __tablename__ = "bookings"
 
     id = Column(Integer, primary_key=True, index=True)
+    seva_type = Column(String, default="Shree Shyam Kirtan Seva", nullable=True)
     full_name = Column(String, nullable=False)
-    address = Column(String, nullable=False)
+    address = Column(String, nullable=True)
     phone = Column(String, nullable=False)
     alt_phone = Column(String, nullable=True)
-    booking_date = Column(Date, unique=True, nullable=False)
+    booking_date = Column(Date, nullable=True)
+    notes = Column(Text, nullable=True)
     status = Column(String, default="Pending")
 
 

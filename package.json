@@ -1,0 +1,12 @@
+{
+  "name": "shyam-bhajan-seva-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shyam Bhajan Seva Mandal - Full Stack Web Application",
+  "scripts": {
+    "dev": "npm run --prefix frontend dev",
+    "build": "npm run --prefix frontend build",
+    "start": "npm run --prefix frontend start",
+    "lint": "npm run --prefix frontend lint"
+  }
+}
